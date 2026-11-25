@@ -17,6 +17,14 @@
     "56": "https://bsc-rpc.publicnode.com",
     "43114": "https://avalanche-c-chain-rpc.publicnode.com"
   },
+  "_evm_rpc_fallback": "0.3.12: official keyless public RPCs asked after the RPC above (or the human's own) when it errs or refuses (a provider may refuse fresh receipts)",
+  "evm_rpc_fallback": {
+    "1": ["https://eth.drpc.org"],
+    "42161": ["https://arb1.arbitrum.io/rpc"],
+    "10": ["https://mainnet.optimism.io"],
+    "137": ["https://polygon.drpc.org"],
+    "8453": ["https://mainnet.base.org"]
+  },
   "npx_command": "npx -y dontaskagain-mcp",
   "pair_code_ttl_hours": 24
 }

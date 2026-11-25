@@ -3,6 +3,24 @@
 All notable changes to the Don't Ask Again Chrome extension. Versions before the first public release were
 distributed as early-access zip archives.
 
+## 0.3.12 — 2026-11-25
+- **History of an account in E2E.** Your own operations (transfers, swaps, bridges, refuels, resources) come from the
+  wallet's encrypted local history with their steps and transactions — kept up to 90 days (at most 300 finished
+  operations, 1 MB) and back after a browser restart at unlock. Token transfers of the EVM address that did not go
+  through this wallet (incoming payments, transfers made elsewhere) are read from the networks: ERC-20 `Transfer` logs
+  of your own address over about a day, each with its own page and explorer link. A TRON node keeps no history by
+  address, so incoming TRON transfers are not read; the History tab links to the explorer pages of the account.
+- **The operation page after signing.** The sign window, the popup and the side panel open the operation's page with
+  its steps (resources, approve, swap, burn / mint, sending, confirmation), transactions and explorer links; the
+  steps update live. A finished operation is a notification that opens its page.
+- Statuses follow the chain: a request stuck at «sent» (a bridge at «minting») closes as confirmed when its
+  transaction is in a block; a «not seen in time» failure of a transaction that succeeded is corrected; a confirmation
+  read that fails never turns a request into a failure.
+- Direct EVM reads ask the next RPC of the network when one fails or refuses (official keyless public RPCs as
+  fallbacks).
+- Swap: the reference rate reads «1 TRX ≈ X USDT (reference, source …)».
+- Texts for agents are English, whatever the language of the wallet.
+
 ## 0.3.11 — 2026-11-25
 - `dontaskagain-mcp` is on npm: the wizard runs `npx -y dontaskagain-mcp@0.1.4` for Claude Code, Codex and JSON.
   The path or URL field still overrides it (for example the same version's archive from the website).

@@ -39,6 +39,8 @@ export type Cmd =
   | { cmd: 'agentNewTypes'; id: string; allow: string[] }
   // 0.2.1: operation page
   | { cmd: 'op'; request_id: string }
+  | { cmd: 'openOp'; request_id: string }
+  | { cmd: 'chainStatus'; account_id: string }
   | { cmd: 'settings'; patch: Partial<SettingsView> }
   | { cmd: 'connect'; invite?: string }
   | { cmd: 'disconnect' }
@@ -100,7 +102,10 @@ export interface HistoryRow {
   swap?: { amount_out_min?: string } | null;
   /** 0.2.1: the status in words («on the way: waiting for Circle») and the progress of a multi-step operation */
   status_label?: string; progress?: string;
+  /** 0.3.12: a token movement read from the chain (not started by this wallet): direction, the other side, txid */
+  chain?: { dir: 'in' | 'out' | 'self'; counterparty: string; txid: string; block: number; estimated?: boolean };
 }
+export interface ChainStatusView { at: number | null; errors: { network: string; code: string }[]; loading: boolean }
 
 export interface SettingsView { signer_url: string; autolock_min: number; debug_direct_node: boolean; open_in_side_panel: boolean; agents_paused: boolean; mcp_launch?: McpLaunch; mcp_launch_path?: string; mcp_client?: 'claude' | 'codex' | 'json';
   // 0.3.0

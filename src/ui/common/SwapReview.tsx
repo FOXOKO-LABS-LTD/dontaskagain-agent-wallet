@@ -56,7 +56,7 @@ export function SwapBlock({ s, accountName }: { s: SwapView; accountName?: strin
           <span className="k">{t('swapr.getAtLeast')}</span><span><span className="num" style={{ fontSize: 16, fontWeight: 700 }}>{s.amount_out_min} {s.asset_out}</span><div className="small muted">{t('swapr.expected', { v: `${s.amount_out} ${s.asset_out}` })}</div></span>
           <span className="k">{t('swapr.rate')}</span><span><span className="num">{s.rate}</span>
             {s.reference && !s.reference.stale && dev !== null && dev !== undefined
-              ? <div className={`small ${dev > 200 ? '' : 'muted'}`}>{dev <= 0 ? t('swapr.better', { p: (-dev / 100).toFixed(2) }) : t('swapr.worse', { p: (dev / 100).toFixed(2) })} · TRX = {s.reference.price_usd} USD ({s.reference.source ?? t('swapr.exchanges')})</div>
+              ? <div className={`small ${dev > 200 ? '' : 'muted'}`}>{dev <= 0 ? t('swapr.better', { p: (-dev / 100).toFixed(2) }) : t('swapr.worse', { p: (dev / 100).toFixed(2) })} · {t('swapr.refRate', { p: s.reference.price_usd, src: s.reference.source ?? t('swapr.exchanges') })}</div>
               : <div className="small subtle">{t('swapr.noReference')}</div>}</span>
           <span className="k">{t('swapr.route')}</span><span>{s.route.map((x, i) => <div key={i} className="small"><b>{x.from} → {x.to}</b>{t('swapr.pool', { v: x.version })}{x.version !== 'v2' || x.fee_pct !== '0' ? t('swapr.poolFee', { p: x.fee_pct }) : ''}</div>)}
             {(s.fee || s.impact) && <div className="small muted">{t('swapr.sunFees', { fee: s.fee ?? '—', asset: s.asset_in, impact: s.impact ?? '—' })}</div>}</span>

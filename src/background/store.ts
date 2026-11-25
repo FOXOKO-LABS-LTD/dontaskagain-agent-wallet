@@ -36,7 +36,10 @@ export interface SessionState {
   pendingMints?: Record<string, any>;
   /** 0.3.3: what was signed for a request / own operation — re-sent as is while it may still be valid */
   signedOnce?: Record<string, SignedRec>;
+  /** 0.3.12: token history of the accounts' EVM addresses read from the chain (memory only; account id → rows) */
+  chainHist?: Record<string, ChainHistState>;
 }
+export interface ChainHistState { at: number; rows: import('../lib/chain/history').ChainRow[]; errors: { network: string; code: string }[] }
 
 /**
  * 0.3.3: one signed transaction per request. Written BEFORE it is sent; while it may still be valid (TRON:

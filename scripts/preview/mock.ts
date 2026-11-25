@@ -1,4 +1,5 @@
 import { buildOp } from '../../src/lib/op';
+import { chainOpView } from '../../src/lib/chain/history';
 // first meaningful frame (timing.mjs reads body[data-ff]): the header / sub-bar of the app is in the DOM
 new MutationObserver((_, o) => {
   if (document.querySelector('#root .topbar, #root .subbar')) { document.body.dataset.ff = String(Math.round(performance.now())); o.disconnect(); }
@@ -207,6 +208,31 @@ if (q.get('e2e') === '1') {
   const create0 = answers.agentCreate;
   answers.agentCreate = (c: any) => ({ ...create0(c), launch: c.launch ?? 'npx',
     e2e: { wallet_fp: FP, wallet_key: 'daa1.x25519.ed25519.Q2xhdWRlIHByZXZpZXcga2V5', pair: 'PAIR-7HQ2-KX4M', pair_expires_at: iso(now + 24 * 3600_000), key_mode: c.launch === 'remote' ? 'server' : 'agent' } });
+}
+// ?e2e=public (0.3.12): the public Signer (E2E required, everything read through it); History = own operations from
+// the wallet's local history + token transfers of the EVM address read from the chain; the E2E operation pages
+if (q.get('e2e') === 'public') {
+  (status as any).e2e = { server_mode: 'required', active: true, wanted: true, wallet_fp: 'K7QX-M2PA-9RTD-4WZE-H6NB-3CJF', wallet_key: 'daa1.x25519.ed25519.Q2xhdWRlIHByZXZpZXcga2V5', public_signer_url: 'https://signer.dontaskagain.xyz', public_placeholder: false };
+  Object.assign(status.settings, { signer_mode: 'public', e2e_enabled: true, e2e_reads: 'signer' });
+  const ST = '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed';
+  const e2eHist = [
+    { request_id: 'op_e2e_run', agent: { id: 'ag_7f3k', name: 'claude-bot' }, account: { id: 'acc_main', name: 'main' }, type: 'transfer', network: 'tron', intent: { asset: 'USDT', to: BOOK, amount: '25' }, status: 'broadcast', at: now - 40_000, own: false, by: 'human', status_label: 'отправлено, ждём блок' },
+    { request_id: 'chain:evm:8453:' + HX('9a') + ':3', account: { id: 'acc_main', name: 'main' }, type: 'transfer', network: 'evm:8453', intent: { asset: 'USDC', amount: '120', from: ST }, status: 'confirmed', at: now - 25 * 60_000, own: false, by: 'server',
+      chain: { dir: 'in', counterparty: ST, txid: HX('9a'), block: 38_745_112 } },
+    { request_id: 'op_sw', account: { id: 'acc_main', name: 'main' }, type: 'swap', network: 'tron', intent: { asset_in: 'USDT', asset_out: 'TRX', amount_in: '10' }, swap: { amount_out_min: '34.083314' }, status: 'confirmed', at: now - 52 * 60_000, own: true, by: 'human' },
+    { request_id: 'op_br_done', account: { id: 'acc_main', name: 'main' }, type: 'bridge', network: 'evm:1', intent: { asset: 'USDC', from_network: 'evm:1', to_network: 'evm:8453', amount: '30' }, status: 'confirmed', at: now - 3 * 3600_000, own: true, by: 'human' },
+    { request_id: 'chain:evm:42161:' + HX('7b') + ':0', account: { id: 'acc_main', name: 'main' }, type: 'transfer', network: 'evm:42161', intent: { asset: 'USDT', amount: '15.5', to: ST }, status: 'confirmed', at: now - 7 * 3600_000, own: false, by: 'server',
+      chain: { dir: 'out', counterparty: ST, txid: HX('7b'), block: 402_118_907, estimated: true } },
+  ];
+  answers.history = (c: any) => (c.account_id ? e2eHist.filter((h) => h.account.id === c.account_id) : e2eHist);
+  (answers as any).chainStatus = () => ({ at: now - 30_000, errors: [], loading: false });
+  OPS.op_e2e_run = { request_id: 'op_e2e_run', type: 'transfer', network: 'tron', status: 'broadcast', agent: { id: 'ag_7f3k', name: 'claude-bot' }, reason: 'Оплата счёта #118 поставщику', account: { id: 'acc_main', name: 'main' },
+    created_at: iso(now - 40_000), intent: { asset: 'USDT', to: BOOK, amount: '25' }, e2e: { agent_id: 'ag_7f3k' },
+    resources: { route: 'proxy', state: 'delivered', cost_usdc: '0.48', x402: [{ route: 'proxy', product: 'tron/send', state: 'delivered' }] }, tx: { network: 'tron', tx_id: '9c1f5b3e0a7d44c2b8e6f1a2d3c4b5a6978877665544332211ffeeddccbbaa99' } };
+  OPS.op_e2e_done = { ...OPS.op_e2e_run, request_id: 'op_e2e_done', status: 'confirmed', confirmed_at: iso(now - 20_000), tx: { ...OPS.op_e2e_run.tx, fee: { native: '0' } } };
+  const chainIn = { id: e2eHist[1].request_id, account_id: 'acc_main', network: 'evm:8453', txid: HX('9a'), log_index: 3, block: 38_745_112, at: now - 25 * 60_000, dir: 'in', asset: 'USDC', amount: '120', from: ST, to: A0.evm };
+  const op0 = (answers as any).op;
+  (answers as any).op = (c: any) => (String(c.request_id).startsWith('chain:') ? chainOpView(chainIn as any) : op0(c));
 }
 // ?client=claude|codex|json (0.3.8): the MCP client the connect step prints commands for
 if (q.get('client')) (status.settings as any).mcp_client = q.get('client');

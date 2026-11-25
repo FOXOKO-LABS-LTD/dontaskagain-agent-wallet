@@ -6,7 +6,7 @@ import { ownEntries, recipientCheck } from '../lib/ownAccounts';
 import { randomId } from '../lib/bytes';
 import { requireSecureUrl } from '../lib/urlPolicy';
 import { DEFAULT_SETTINGS, isMcpLaunch, newTypesOf, normalizeReads, rootAccount, rpcOverrides, tronNodeOf, validName } from '../lib/wallet/model';
-import type { Cmd, Reply, StatusView } from '../shared/api';
+import type { Cmd, HistoryRow, Reply, StatusView } from '../shared/api';
 import { balancesOf } from './balances';
 import { applyPanelBehavior, initPanelPorts, panelOpen } from './panel';
 import { prices } from './prices';
@@ -18,7 +18,7 @@ import {
   drainPendingPays, markSeen, onRequestList, onRequestNew, onRequestPay, onRequestUpdate, openSignWindow, ownPrepare, ownSign,
   pendingCount, pendingRows, prepareRequest, dropForgedPlaintext, opView, rejectRequest, signRequest, updateBadge, historyRows, rejectPaused, markRejectedLocally,
 } from './requests';
-import { e2eUnlocked, unpinE2E, confirmFp, drainInbox, drainOutbox, e2eActive, e2eView, e2eWanted, ensureWalletKeys, expireE2E, reverifyE2E, getServerMode, onE2EEnvelope, onE2EList, onHelloE2E, onJobUpdate, restoreE2E, rotateWalletKey, setManualFp, setServerMode } from './e2e';
+import { reconcileE2E, e2eUnlocked, unpinE2E, confirmFp, drainInbox, drainOutbox, e2eActive, e2eView, e2eWanted, ensureWalletKeys, expireE2E, reverifyE2E, getServerMode, onE2EEnvelope, onE2EList, onHelloE2E, onJobUpdate, restoreE2E, rotateWalletKey, setManualFp, setServerMode } from './e2e';
 import e2eCfg from '../config/e2e.json';
 import { registeringView, registrationView, answerNewTypes, connectAgentE2E, connect, createAgent, disconnect, EXT_VERSION, loadSession, onHello, refreshAgents, revokeAgent, rotateAgent, sendState, setAgentAccounts, bindAccountToAgents, setHandlers, socket, syncDoc, updateAgent } from './signer';
 import { LEGACY_MCP_NAME } from '../lib/agentConnect';
@@ -33,7 +33,9 @@ import { initI18n } from '../i18n';
 
 installGlobalCatch();
 void initI18n(); // notifications and the human copy of errors follow the UI language (Settings → «Language»)
-const notifyPages = () => { try { chrome.runtime.sendMessage({ event: 'changed' })?.catch?.(() => {}); } catch { /* no pages */ } };
+import { notifyPages } from './pages';
+import { chainCached, chainRow, refreshChain } from './chainHistory';
+import { chainOpView, isChainId, plainTxid, txidsOf } from '../lib/chain/history';
 
 let helloConn = -1;
 setHandlers({
@@ -97,10 +99,7 @@ chrome.windows.onRemoved.addListener((id) => bg('windows.onRemoved', async () =>
 }));
 chrome.notifications.onClicked.addListener((nid) => bg('notification click', async () => {
   // 0.2.1: the end of a bridge / refuel / swap opens its operation page
-  if (typeof nid === 'string' && nid.startsWith('op:')) {
-    await chrome.windows.create({ url: chrome.runtime.getURL(`popup.html#/op/${encodeURIComponent(nid.slice(3))}`), type: 'popup', width: 400, height: 640, focused: true });
-    return;
-  }
+  if (typeof nid === 'string' && nid.startsWith('op:')) { await openOpWindow(nid.slice(3)); return; }
   await openSignWindow();
 }));
 
@@ -145,7 +144,7 @@ async function changed() { await syncDoc().catch((e) => console.warn('wallet.syn
 // 0.3.2: a window the agent made the worker open builds its request (prepare), and open forms re-quote on
 // timers (swapQuote, bridgeQuote, resourceQuote) — none of it is the human. Only real input (`touch` from a page's
 // pointer / key handler) and commands the human clicks move the auto-lock.
-const PASSIVE = new Set<Cmd['cmd']>(['op', 'status', 'balances', 'balancesCached', 'prices', 'history', 'requests', 'seen', 'agentsRefresh', 'lock', 'accountPreview',
+const PASSIVE = new Set<Cmd['cmd']>(['op', 'chainStatus', 'status', 'balances', 'balancesCached', 'prices', 'history', 'requests', 'seen', 'agentsRefresh', 'lock', 'accountPreview',
   'prepare', 'swapQuote', 'bridgeQuote', 'resourceQuote', 'bookCheck', 'openSignWindow']);
 
 async function handle(c: Cmd): Promise<unknown> {
@@ -254,7 +253,13 @@ async function handle(c: Cmd): Promise<unknown> {
     case 'agentRevoke': { const r = await revokeAgent(c.id); notifyPages(); return r; }
     case 'agentRotate': { const r = await rotateAgent(c.id); notifyPages(); return r; }
     case 'agentUpdate': await updateAgent(c.id, c.patch); notifyPages(); return null;
-    case 'op': return opView(c.request_id);
+    case 'op': {
+      bg('reconcile', async () => { if (await reconcileE2E()) notifyPages(); });
+      if (isChainId(c.request_id)) { const r = await chainRow(c.request_id); if (!r) throw new Error('NOT_FOUND'); return chainOpView(r); }
+      return opView(c.request_id);
+    }
+    case 'openOp': await openOpWindow(c.request_id); return null;
+    case 'chainStatus': { const x = await chainCached(c.account_id); return { at: x?.at ?? null, errors: x?.errors ?? [], loading: !x }; }
     case 'agentNewTypes': await answerNewTypes(c.id, c.allow); notifyPages(); return null;
     case 'agentSetAccounts': await setAgentAccounts(c.id, c.accounts); notifyPages(); return null;
     case 'agentsBindAccount': { const r = await bindAccountToAgents(c.account_id, c.agent_ids); notifyPages(); return r; }
@@ -310,10 +315,15 @@ async function handle(c: Cmd): Promise<unknown> {
     case 'evmSign': { const r = await evmSign(c.key, c.addressChecked, c.build_id); dropBalances(); notifyPages(); return r; }
     case 'history': {
       // the UI never waits for the network when it has something to show: local rows now, the server's in the background
-      const rows = await historyRows(c.account_id);
+      let rows = await historyRows(c.account_id);
       if (rows.length) bg('history', async () => { if (await fetchHistory()) notifyPages(); });
-      else { await fetchHistory().catch((e) => console.warn('history', e)); return historyRows(c.account_id); }
-      return rows;
+      else { await fetchHistory().catch((e) => console.warn('history', e)); rows = await historyRows(c.account_id); }
+      // 0.3.12: of one account — its token movements on the chain too (what the wallet did not start), never twice
+      if (!c.account_id) return rows;
+      const accId = c.account_id;
+      bg('chain history', async () => { if (await refreshChain(accId)) notifyPages(); });
+      bg('reconcile', async () => { if (await reconcileE2E()) notifyPages(); });
+      return withChainRows(rows, accId);
     }
     case 'pauseAgents': {
       // the Signer pauses and refuses what waits (wallet.pause); without it — the local fallback refuses here
@@ -323,6 +333,28 @@ async function handle(c: Cmd): Promise<unknown> {
       notifyPages(); return { ...r, panel_open: panelOpen() };
     }
   }
+}
+
+/** Local rows + chain rows of the account (without those whose txid a local operation already carries), newest first. */
+async function withChainRows(rows: HistoryRow[], accountId: string): Promise<HistoryRow[]> {
+  const ch = await chainCached(accountId);
+  if (!ch?.rows.length) return rows;
+  const s = await getSession();
+  const mine = new Set<string>();
+  for (const e of Object.values(s.requests ?? {})) txidsOf(e.request, mine);
+  const pub = await getPublic();
+  const acc = pub?.accounts.find((a) => a.id === accountId);
+  const extra: HistoryRow[] = ch.rows.filter((r) => !mine.has(plainTxid(r.txid))).map((r) => ({
+    request_id: r.id, account: { id: accountId, name: acc?.name ?? '' }, type: 'transfer', network: r.network,
+    intent: { asset: r.asset, amount: r.amount, ...(r.dir === 'in' ? { from: r.from } : { to: r.to }) }, status: 'confirmed', at: r.at, own: false, by: 'server',
+    chain: { dir: r.dir, counterparty: r.dir === 'in' ? r.from : r.to, txid: r.txid, block: r.block, estimated: !!r.at_estimated },
+  }));
+  return [...rows, ...extra].sort((a, b) => b.at - a.at);
+}
+
+/** The operation page in its own window (a notification, the sign window while more requests wait). */
+async function openOpWindow(id: string): Promise<void> {
+  await chrome.windows.create({ url: chrome.runtime.getURL(`popup.html#/op/${encodeURIComponent(id)}`), type: 'popup', width: 400, height: 640, focused: true });
 }
 
 /** another Signer is another wallet there — its id and document versions are not carried over. */

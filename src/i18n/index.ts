@@ -19,7 +19,7 @@ export type Params = Record<string, string | number | bigint | null | undefined>
 export const LANGS: Lang[] = ['ru', 'en'];
 export const DICTS: Record<Lang, Record<string, Entry>> = { ru, en };
 /** The language of texts that go to agents (reject details): fixed, never the human's UI language. */
-export const AGENT_LANG: Lang = 'ru';
+export const AGENT_LANG: Lang = 'en'; // 0.3.12: agents get English, whatever the human's UI language
 export const STORAGE_KEY = 'ui_lang';
 
 const chromeApi = (): any => (typeof chrome !== 'undefined' ? chrome : undefined);

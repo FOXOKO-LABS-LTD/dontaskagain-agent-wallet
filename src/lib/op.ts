@@ -272,6 +272,14 @@ export function elapsed(fromIso: string | undefined, now = Date.now()): string {
   return t('op.el.hm', { h: Math.floor(m / 60), m: m % 60 });
 }
 
+/** Notification when any operation is done (confirmed): a multi-step one in its own words, the others by their title. */
+export function doneText(r: any): { title: string; message: string } | null {
+  if (r?.status !== 'confirmed') return null;
+  const f = finishText(r);
+  if (f) return f;
+  return { title: r.type === 'transfer' ? t('op.done.transfer') : r.type === 'tron_resource' ? t('op.done.resource') : t('op.done.op'), message: titleOf(r).title };
+}
+
 /** Notification when a multi-step operation ends. */
 export function finishText(r: any): { title: string; message: string } | null {
   if (!MULTI.has(r.type) || !isFinal(r.status)) return null;

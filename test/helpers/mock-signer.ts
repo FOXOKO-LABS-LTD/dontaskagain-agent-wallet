@@ -47,7 +47,11 @@ export interface MockState {
   /** 0.3.3: what the direct node / RPC says about a txid (gettransactioninfobyid, eth_getTransactionReceipt):
    *  in a block once the mock pushed a `confirmed` job update with it (as a real chain would have it); `missing` — never
    *  found, `failed` — in a block, failed */
-  chain?: { missing?: string[]; failed?: string[] };
+  chain?: { missing?: string[]; failed?: string[]; /** 0.3.12: in a block (successful) whatever the job updates said */ ok?: string[] };
+  /** 0.3.12: eth_getLogs answers per chain (filtered by the request's topics and range) and the head block */
+  logs?: Record<number, any[]>; head?: number;
+  /** 0.3.12: relay paths answered 403 METHOD_NOT_ALLOWED (an older Signer), e.g. '/v1/ext/net/tron/gettransactioninfobyid' */
+  refuse?: string[];
   gw?: { calls: any[]; sendStatus?: number; energyStatus?: string; /** 0.3.1: paid tron/send answers 202 processing; payments/{id} answers this */ sendProcessing?: boolean; payState?: any };
 }
 
@@ -150,6 +154,7 @@ export async function startMockSigner(st: MockState) {
     }
     if (req.headers.authorization !== 'Bearer agws_test') return send(401, { error: { code: 'UNAUTHORIZED' } });
     (st.relay ??= []).push({ path: url.pathname, body: j, query: url.search });
+    if (st.refuse?.includes(url.pathname)) return send(403, { error: { code: 'METHOD_NOT_ALLOWED', message: 'method not in the relay whitelist' } });
     if (url.pathname.startsWith('/v1/ext/net/tron/')) return send(200, tron(url.pathname.split('/').pop()!, j));
     const evmM = url.pathname.match(/^\/v1\/ext\/net\/evm\/(\d+)$/);
     if (evmM && st.evm) return send(200, { jsonrpc: '2.0', id: j.id, ...evmRpc(Number(evmM[1]), j.method, j.params ?? []) });
@@ -198,13 +203,26 @@ export async function startMockSigner(st: MockState) {
     switch (method) {
       case 'eth_getBalance': return { result: hex(e.native[chain] ?? 0n) };
       case 'eth_getTransactionCount': return { result: hex(e.nonce?.[chain] ?? 5) };
-      case 'eth_getBlockByNumber': return { result: { number: '0x10', baseFeePerGas: hex(e.baseFee ?? 1_000_000_000n) } };
+      case 'eth_getBlockByNumber': {
+        const n = typeof p[0] === 'string' && /^0x/.test(p[0]) ? Number.parseInt(p[0], 16) : 0x10;
+        const head = st.head ?? 0x10;
+        return { result: { number: hex(n), baseFeePerGas: hex(e.baseFee ?? 1_000_000_000n), timestamp: hex(Math.floor(Date.now() / 1000) - Math.max(0, head - n) * 2) } };
+      }
+      case 'eth_blockNumber': return { result: hex(st.head ?? 0x10) };
+      case 'eth_getLogs': {
+        const f = p[0] ?? {}, from = Number.parseInt(f.fromBlock, 16), to = Number.parseInt(f.toBlock, 16);
+        const addrs: string[] = (Array.isArray(f.address) ? f.address : [f.address]).map((x: string) => String(x).toLowerCase());
+        const match = (want: unknown, got: string) => want === null || want === undefined || (Array.isArray(want) ? want.map((x) => String(x).toLowerCase()).includes(got) : String(want).toLowerCase() === got);
+        const out = (st.logs?.[chain] ?? []).filter((l) => { const b = Number.parseInt(l.blockNumber, 16); return b >= from && b <= to && addrs.includes(String(l.address).toLowerCase())
+          && (f.topics ?? []).every((w: unknown, i: number) => match(w, String(l.topics[i] ?? '').toLowerCase())); });
+        return { result: out };
+      }
       case 'eth_maxPriorityFeePerGas': return { result: hex(e.prio ?? 1_000_000n) };
       case 'eth_getCode': return { result: e.code ?? '0x' };
       case 'eth_chainId': return { result: hex(chain) };
       case 'eth_getTransactionReceipt': {
         const id = String(p[0] ?? '').toLowerCase();
-        if (st.chain?.missing?.some((x) => x.toLowerCase() === id) || !onChain.has(id.replace(/^0x/, ''))) return { result: null };
+        if (st.chain?.missing?.some((x) => x.toLowerCase() === id) || (!onChain.has(id.replace(/^0x/, '')) && !st.chain?.ok?.some((x) => x.toLowerCase().replace(/^0x/, '') === id.replace(/^0x/, '')))) return { result: null };
         return { result: { transactionHash: id, blockNumber: '0x11', status: st.chain?.failed?.some((x) => x.toLowerCase() === id) ? '0x0' : '0x1' } };
       }
       case 'eth_estimateGas': {
@@ -234,7 +252,7 @@ export async function startMockSigner(st: MockState) {
       case 'getchainparameters': return { chainParameter: [{ key: 'getEnergyFee', value: 210 }] };
       case 'gettransactioninfobyid': {
         const id = String(j.value ?? '').toLowerCase();
-        if (st.chain?.missing?.some((x) => x.toLowerCase() === id) || !onChain.has(id.replace(/^0x/, ''))) return {};
+        if (st.chain?.missing?.some((x) => x.toLowerCase() === id) || (!onChain.has(id.replace(/^0x/, '')) && !st.chain?.ok?.some((x) => x.toLowerCase().replace(/^0x/, '') === id.replace(/^0x/, '')))) return {};
         if (st.chain?.failed?.some((x) => x.toLowerCase() === id)) return { id, blockNumber: 79208899, result: 'FAILED', receipt: { result: 'REVERT' } };
         return { id, blockNumber: 79208899, receipt: {} };
       }

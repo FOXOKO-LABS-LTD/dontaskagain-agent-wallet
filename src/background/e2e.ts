@@ -17,7 +17,9 @@ import { Gateway, GwError, deliveredStatus, failedStatus, payFollow, type GwResu
 import { bodyHash, buildE2EDoc, checkFresh, e2eDocDigest, envelopeHash, forAgent, normalizeRequest, rejectOutcome, SEEN_KEEP_MS, viewPayload } from '../lib/e2e/protocol';
 import type { Known } from '../lib/e2e/reads';
 import { requireNet, servedNets } from '../lib/evm/networks';
-import { isFinal } from '../lib/op';
+import { doneText, isFinal } from '../lib/op';
+import { pruneE2EHistory } from '../lib/e2e/retention';
+import { notifyPages } from './pages';
 import { signEvmMessage, signTronMessage } from '../lib/sign';
 import { normalizeTron } from '../lib/tron/address';
 import { decodeRaw, signedTxHex } from '../lib/tron/tx';
@@ -121,7 +123,7 @@ async function save(): Promise<void> {
   const now = Date.now();
   for (const [k, t] of Object.entries(s.seen)) if (now - t > SEEN_KEEP_MS) delete s.seen[k];
   for (const [k, v] of Object.entries(s.idem)) if (now - v.at > SEEN_KEEP_MS) delete s.idem[k];
-  for (const [k, r] of Object.entries(s.reqs)) if (isFinal(r.status) && now - Date.parse(r.updated_at ?? r.created_at ?? '') > SEEN_KEEP_MS) delete s.reqs[k];
+  pruneE2EHistory(s.reqs, now); // 0.3.12: own operations are history — 90 days / 300 / 1 MB, not the 8 days of the replay set
   for (const [k, j] of Object.entries(s.jobs)) if (now - j.created_at > 7 * 86_400_000) delete s.jobs[k];
   for (const [k, x] of Object.entries(s.exec)) if (now - x.at > 7 * 86_400_000 || (s.reqs[k] && isFinal(s.reqs[k].status))) delete s.exec[k];
   const secret: Secret = { reqs: s.reqs, jobs: s.jobs, outbox: s.outbox, exec: s.exec };
@@ -152,7 +154,7 @@ export async function e2eUnlocked(): Promise<void> {
 // a password change: everything is read with the old key first, then written with the new one
 onRekey(async () => { await e2eUnlocked(); }, async () => { await patchSession({ e2eRestKey: undefined } as any); if (secretLoaded) await save(); });
 /** tests: forget the in-memory mirror */
-export function dropE2ECache(): void { mem = null; secretLoaded = false; decryptFailed = false; serverMode = 'unknown'; E2E_ON = false; modeRestored = false; waiters.clear(); running.clear(); }
+export function dropE2ECache(): void { checkedAt.clear(); mem = null; secretLoaded = false; decryptFailed = false; serverMode = 'unknown'; E2E_ON = false; modeRestored = false; waiters.clear(); running.clear(); }
 
 export function setServerMode(m: ServerMode): void { serverMode = m; void patchSession({ e2eServerMode: undefined } as any); }
 export const getServerMode = () => serverMode;
@@ -385,6 +387,12 @@ export async function setE2EReq(req: any, event = 'request.status'): Promise<voi
   s.reqs[req.request_id] = next;
   await save();
   await putRequest(next);
+  notifyPages(); // an open operation page follows every step (payments, broadcast, confirmation)
+  // 0.3.12: the end of an operation is a notification that opens its page (failures notify in fail())
+  if (prev && !isFinal(prev.status) && next.status === 'confirmed' && !String(next.request_id).endsWith(':mint')) {
+    const d = doneText(next);
+    if (d) notify(`op:${next.request_id}`, d.title, d.message);
+  }
   const agentId = next.e2e?.agent_id;
   if (!agentId) return;
   const changed = !prev || prev.status !== next.status || JSON.stringify(prev.resources) !== JSON.stringify(next.resources) || JSON.stringify(prev.tx) !== JSON.stringify(next.tx)
@@ -611,6 +619,8 @@ export async function ownE2E(type: string, body: any): Promise<any> {
 const gateway = async () => { const p = await getPublic(); return new Gateway(() => p?.settings.x402_gateway_url ?? e2eCfg.x402_gateway_url); };
 
 async function fail(rid: string, code: string, message: string, detail?: any): Promise<void> {
+  // 0.3.12: a request the chain already showed as done is never turned into a failure by a late update
+  if ((await st()).reqs[rid]?.status === 'confirmed') { console.warn('[e2e] late failure ignored: confirmed on chain', { request_id: rid, code }); return; }
   await setE2EReq({ request_id: rid, status: 'failed', error: { code, message, ...(detail ? { detail } : {}) } });
   const r = (await st()).reqs[rid];
   notify(`op:${rid}`, `${PRODUCT_NAME}: ${tr('e2e.opFailed')}`, `${code}: ${message}`.slice(0, 200));
@@ -690,7 +700,7 @@ async function execute(rid: string, body: any): Promise<void> {
       const up = await awaitStep(job, 0, async (u) => { if (u.state === 'broadcast') await setE2EReq({ request_id: rid, status: 'broadcast', tx: { network: net, tx_id: u.txid } }); });
       const req = (await st()).reqs[rid];
       await confirmVerified(rid, net, up.txid, { tx: { network: net, tx_id: up.txid, ...(up.fee ? { fee: up.fee } : {}) },
-        ...(req?.type === 'refuel' ? { refuel: { ...(req.refuel ?? {}), state: 'l1_confirmed', to_network: req.intent?.to_network, amount_eth: req.intent?.amount_eth, note: tr('e2e.refuelL2Note') } } : {}) });
+        ...(req?.type === 'refuel' ? { refuel: { ...(req.refuel ?? {}), state: 'l1_confirmed', to_network: req.intent?.to_network, amount_eth: req.intent?.amount_eth, note: ta('e2e.refuelL2Note') } } : {}) });
     } else throw new ExecError('BAD_REQUEST', 'nothing signed');
   } catch (e) {
     if (e instanceof JobUnconfirmed) { console.warn('[e2e] job not acked — resumed at the next hello', { request_id: rid, job_id: e.job_id }); return; }
@@ -809,7 +819,9 @@ export const E2E_TIMING = { poll_ms: 2_000, retry_ms: 3_000, follow_min_ms: 5_00
 
 // ---------------- our own check of «confirmed» (0.3.3) ----------------
 /** What the read path (the human's own node / RPC, or the Signer) says about a transaction: in a block and successful, failed, or not seen. */
-export async function chainVerdict(network: string, txid: string): Promise<'ok' | 'failed' | 'unknown'> {
+/** `unknown` — the read worked and the transaction is not there (yet); `error` — the read itself failed (a refused
+ * method, a provider error): nothing is known, it never counts as «not found» (0.3.12). */
+export async function chainVerdict(network: string, txid: string): Promise<'ok' | 'failed' | 'unknown' | 'error'> {
   try {
     const r = await readers();
     if (network === 'tron') {
@@ -820,7 +832,7 @@ export async function chainVerdict(network: string, txid: string): Promise<'ok' 
     const rc: any = await r.evm.rpc(requireNet(network).chain_id, 'eth_getTransactionReceipt', [txid]);
     if (!rc || !rc.blockNumber) return 'unknown';
     return rc.status === '0x1' ? 'ok' : 'failed';
-  } catch { return 'unknown'; }
+  } catch { return 'error'; }
 }
 /**
  * The Signer says `confirmed`: the request closes only when the read path sees it in a block (direct reads: the human's own node). Failed there → failed; not
@@ -848,8 +860,69 @@ export async function reverifyE2E(): Promise<void> {
     const v = await chainVerdict(u.network, u.txid);
     if (v === 'ok') await setE2EReq({ request_id: r.request_id, status: 'confirmed', ...u.patch, unverified: null });
     else if (v === 'failed') await fail(r.request_id, 'TX_FAILED_ONCHAIN', 'the transaction is in a block but failed (checked by a network read)');
-    else if (Date.now() > u.until) await fail(r.request_id, 'TX_NOT_FOUND_ONCHAIN', 'the Signer reported it confirmed, a network read never saw it in a block');
+    // 0.3.12: past the hold only when the network was actually read and the transaction is not there; a read that
+    // fails (a refused method, a provider error) keeps it `broadcast` — never «failed» without a check on chain
+    else if (v === 'unknown' && Date.now() > u.until) await fail(r.request_id, 'TX_NOT_FOUND_ONCHAIN', 'the Signer reported it confirmed, a network read never saw it in a block');
   }
+  await reconcileE2E();
+}
+
+// ---------------- 0.3.12: statuses brought in line with the chain ----------------
+/** Failures that only say «not seen in time» — a successful transaction on chain overrides them. */
+export const RECHECK_FAILED = new Set(['TX_NOT_FOUND_ONCHAIN', 'TX_EXPIRED']);
+const RECHECK_FAILED_DAYS = 30;
+export const RECONCILE_TIMING = { stuck_ms: 60_000, failed_ms: 600_000, per_tick: 5 };
+const checkedAt = new Map<string, number>();
+
+/** The transaction that decides a request: a bridge — its mint; otherwise its own tx (or the one held as unverified). */
+function decisiveTx(r: any): { network: string; txid: string; mint?: number } | null {
+  if (r.type === 'bridge') {
+    const steps: any[] = r.bridge?.steps ?? [];
+    const mi = steps.findIndex((x) => x?.step === 'mint');
+    const tx = steps[mi]?.tx?.tx_id;
+    const net = r.bridge?.to_network ?? r.intent?.to_network;
+    return mi >= 0 && tx && net ? { network: net, txid: tx, mint: mi } : null;
+  }
+  if (r.type === 'swap') return null; // several transactions: its steps are followed by the executor
+  const txid = r.unverified?.txid ?? r.tx?.tx_id ?? r.error?.detail?.tx_id;
+  const network = r.unverified?.network ?? r.tx?.network ?? r.network;
+  return txid && network ? { network, txid } : null;
+}
+
+/**
+ * A request stuck at `broadcast` (a bridge at `minting`) whose transaction is in a block and successful closes as
+ * confirmed; one marked failed only for «not seen in time» (RECHECK_FAILED) is corrected to confirmed when the chain
+ * shows it succeeded. Each request is read at most once a minute (failed ones: every 10 min), a few per tick.
+ */
+export async function reconcileE2E(now = Date.now()): Promise<number> {
+  if (!secretLoaded) return 0;
+  const s = await st();
+  let n = 0, reads = 0;
+  for (const r of Object.values(s.reqs)) {
+    if (reads >= RECONCILE_TIMING.per_tick) break;
+    const stuck = (r.status === 'broadcast' && !r.unverified) || (r.type === 'bridge' && ['minting', 'awaiting_gas'].includes(r.bridge?.state) && !isFinal(r.status));
+    const failed = r.status === 'failed' && RECHECK_FAILED.has(String(r.error?.code ?? '')) && now - Date.parse(r.updated_at ?? r.created_at ?? '') < RECHECK_FAILED_DAYS * 86_400_000;
+    if (!stuck && !failed) continue;
+    const d = decisiveTx(r);
+    if (!d) continue;
+    const last = checkedAt.get(r.request_id) ?? 0;
+    if (now - last < (failed ? RECONCILE_TIMING.failed_ms : RECONCILE_TIMING.stuck_ms)) continue;
+    checkedAt.set(r.request_id, now);
+    reads++;
+    const v = await chainVerdict(d.network, d.txid);
+    if (v !== 'ok') continue;
+    const patch: any = { request_id: r.request_id, status: 'confirmed', tx: { ...(r.tx ?? {}), network: d.network, tx_id: d.txid }, unverified: null,
+      ...(failed ? { error: null, corrected: { from: 'failed', code: r.error?.code, at: nowAt() } } : {}) };
+    if (d.mint !== undefined) {
+      const steps = [...(r.bridge?.steps ?? [])];
+      steps[d.mint] = { ...steps[d.mint], status: 'confirmed', error: undefined };
+      patch.bridge = { ...(r.bridge ?? {}), state: 'done', steps };
+    }
+    console.info('[e2e] confirmed by the chain', { request_id: r.request_id, was: r.status, txid: d.txid });
+    await setE2EReq(patch);
+    n++;
+  }
+  return n;
 }
 
 /** The paid call to its outcome: processing → followed; no answer → nonce. */

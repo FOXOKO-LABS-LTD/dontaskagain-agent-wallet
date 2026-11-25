@@ -103,8 +103,9 @@ describe('language', () => {
     expect(store.ui_lang).toBe('en');
     expect(getLang()).toBe('en');
     expect(t('err.LOCKED')).toBe('The wallet is locked');
-    expect(ta('err.LOCKED')).toBe('Кошелёк заблокирован');
-    expect(both('err.LOCKED')).toEqual({ message: 'Кошелёк заблокирован', text: 'The wallet is locked' });
+    // 0.3.12: agents get English whatever the UI language (the human's language never leaks into agent answers)
+    expect(ta('err.LOCKED')).toBe('The wallet is locked');
+    expect(both('err.LOCKED')).toEqual({ message: 'The wallet is locked', text: 'The wallet is locked' });
     // another view changed it: storage.onChanged
     for (const f of changed) f({ ui_lang: { newValue: 'ru' } }, 'local');
     expect(getLang()).toBe('ru');
@@ -113,5 +114,15 @@ describe('language', () => {
     expect(seen).toEqual(['en', 'ru']);
     off();
     delete (globalThis as any).chrome;
+  });
+});
+
+describe('agent texts (0.3.12)', () => {
+  it('are English while the UI is Russian', async () => {
+    const { ta: agent, both: b, t: human, AGENT_LANG } = await import('../src/i18n');
+    expect(AGENT_LANG).toBe('en');
+    expect(agent('e2e.refuelL2Note')).toMatch(/^credited on L2/);
+    expect(b('blk.balance', { asset: 'USDT', have: '1', need: '2' }).message).toBe('USDT: have 1, need 2');
+    void human;
   });
 });

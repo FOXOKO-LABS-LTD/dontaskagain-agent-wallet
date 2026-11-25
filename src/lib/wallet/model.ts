@@ -195,6 +195,13 @@ export function normalizeReads<T extends Partial<Settings>>(s: T): T {
 export function evmRpcOf(s: Partial<Settings> | undefined, chainId: number | string): string | undefined {
   return s?.e2e_rpc?.[String(chainId)] || (e2eCfg.evm_rpc as Record<string, string>)[String(chainId)];
 }
+/** 0.3.12: every RPC of a network for direct reads, in order: the human's own, the built-in one, the official fallbacks. */
+export function evmRpcsOf(s: Partial<Settings> | undefined, chainId: number | string): string[] {
+  const id = String(chainId);
+  const list = [s?.e2e_rpc?.[id], (e2eCfg.evm_rpc as Record<string, string>)[id], ...((e2eCfg as any).evm_rpc_fallback?.[id] ?? [])].filter((x): x is string => !!x);
+  const seen = new Set<string>();
+  return list.filter((u) => { const k = u.replace(/\/+$/, ''); if (seen.has(k)) return false; seen.add(k); return true; });
+}
 /** Only real overrides are kept (a value equal to the built-in one or empty means «default»). */
 export function rpcOverrides(m: Record<string, string> | undefined): Record<string, string> {
   const def = e2eCfg.evm_rpc as Record<string, string>;

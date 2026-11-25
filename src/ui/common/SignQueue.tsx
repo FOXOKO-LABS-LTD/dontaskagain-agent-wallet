@@ -24,18 +24,26 @@ export function UnlockCard({ onDone, text }: { onDone: () => void; text?: string
   );
 }
 
-export function SignQueue({ st, reload, initial, onClose, mascots }: { st: StatusView; reload: () => void; initial?: string; onClose?: () => void; mascots?: boolean }) {
+/**
+ * 0.3.12: after a signature the operation page follows — `onSigned(id)` when nothing else waits (the popup / panel
+ * navigate to #/op/<id>, the sign window shows the page in place); with more requests in the queue a «progress» button
+ * stays under the note (`openOp`) and the queue goes on.
+ */
+export function SignQueue({ st, reload, initial, onClose, mascots, onSigned, openOp }: { st: StatusView; reload: () => void; initial?: string; onClose?: () => void; mascots?: boolean;
+  onSigned?: (id: string) => void; openOp?: (id: string) => void }) {
   const [rows, setRows] = useState<RequestRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [cur, setCur] = useState<string | null>(initial ?? null);
   const [view, setView] = useState<PreparedView | null>(null);
   const [note, setNote] = useState('');
+  const [signedId, setSignedId] = useState<string | null>(null);
   const { busy, err, setErr, run } = useAsync();
 
-  const loadRows = useCallback(async () => {
-    const r = await api<RequestRow[]>({ cmd: 'requests' }).catch(() => []);
+  const loadRows = useCallback(async (): Promise<RequestRow[]> => {
+    const r = await api<RequestRow[]>({ cmd: 'requests' }).catch(() => [] as RequestRow[]);
     setRows(r); setLoaded(true);
     setCur((c) => (c && r.some((x) => x.request_id === c) ? c : r[0]?.request_id ?? null));
+    return r;
   }, []);
   useEffect(() => { void loadRows(); }, [loadRows, st]);
 
@@ -60,15 +68,21 @@ export function SignQueue({ st, reload, initial, onClose, mascots }: { st: Statu
           ))}
         </div>
       )}
-      {loaded && !rows.length && <div className="card">{/* the sign window has no mascot but the small one in its header (UI kit); the popup / panel show the result */}{mascots && note && <Mascot state={note === t('sign.rejected') ? 'canceled' : 'done'} size={64} className="queue-mascot" />}<p className="muted" style={{ marginTop: 0 }}>{t('sign.noRequests')}</p>{note && <div className="plate ok">{note}</div>}{onClose && <button className="btn" onClick={onClose}>{t('sign.close')}</button>}</div>}
+      {signedId && rows.length > 0 && <div className="plate ok small row between" style={{ gap: 8, alignItems: 'center' }}><span>{t('sign.signedMore')}</span>
+        <button className="btn sm" onClick={() => (openOp ? openOp(signedId) : void api({ cmd: 'openOp', request_id: signedId }))}>{t('sign.toOp')}</button></div>}
+      {loaded && !rows.length && <div className="card">{/* the sign window has no mascot but the small one in its header (UI kit); the popup / panel show the result */}{mascots && note && <Mascot state={note === t('sign.rejected') ? 'canceled' : 'done'} size={64} className="queue-mascot" />}<p className="muted" style={{ marginTop: 0 }}>{t('sign.noRequests')}</p>{note && <div className="plate ok">{note}</div>}{signedId && <button className="btn primary" style={{ marginRight: 8 }} onClick={() => (openOp ? openOp(signedId) : void api({ cmd: 'openOp', request_id: signedId }))}>{t('sign.toOp')}</button>}{onClose && <button className="btn" onClick={onClose}>{t('sign.close')}</button>}</div>}
       {row && st.unlocked && !view && busy && <div className="card muted">{t('sign.building')}</div>}
       {row && view && (
         <Review v={view} busy={busy}
-          onReject={() => void run(async () => { await api({ cmd: 'reject', request_id: view.key }); setNote(t('sign.rejected')); await loadRows(); })}
+          onReject={() => void run(async () => { await api({ cmd: 'reject', request_id: view.key }); setNote(t('sign.rejected')); setSignedId(null); await loadRows(); })}
           onSign={(checked) => void run(async () => {
             const r = await api<{ status: string; view?: PreparedView; resent?: boolean }>({ cmd: 'sign', request_id: view.key, addressChecked: checked, build_id: view.build_id });
             if (r.status === 'changed' && r.view) { setView(r.view); setErr(t('sign.changed')); return; }
-            setNote(r.resent ? t('sign.resent') : t('sign.signedSent')); await loadRows();
+            setNote(r.resent ? t('sign.resent') : t('sign.signedSent'));
+            const id = view.key;
+            setSignedId(id);
+            const left = await loadRows();
+            if (!left.length && onSigned) onSigned(id); // nothing else waits: straight to the operation page
           })} />
       )}
       <Err msg={err} />

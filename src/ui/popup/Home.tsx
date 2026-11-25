@@ -2,14 +2,18 @@
 // Agents (with the number of waiting requests). Assets: every asset of every network in one list with a network tag,
 // zero rows hidden (toggle), and for TRON the Energy / Bandwidth line under the list.
 import { useEffect, useState } from 'react';
-import type { BalancesView, HistoryRow } from '../../shared/api';
+import type { AccountView, BalancesView, ChainStatusView, HistoryRow } from '../../shared/api';
 import { assetRows, fmtAmount, fmtUsd, totalUsd, visibleRows } from '../../lib/portfolio';
 import { requestAmount, requestTarget } from '../../lib/requestLabel';
 import { I } from '../common/icons';
 import { Mascot } from '../common/Mascot';
 import { CoinLogo } from '../common/Logo';
 import { priceHint } from '../../lib/prices';
-import { api, fmtTime, loadBalances, n, useBalances, usePrices } from '../common/ui';
+import { api, fmtTime, loadBalances, n, useBalances, usePrices, useWorkerChanged } from '../common/ui';
+import { shortAddr } from '../../lib/similar';
+import { netLabel } from '../../lib/op';
+import { fmtAmount as fmtAmt } from '../../lib/portfolio';
+import networksCfg from '../../config/networks.json';
 import { AgentsTab } from './Agents';
 import { TYPE_INFO, type RequestType } from '../../lib/wallet/model';
 import type { ScreenProps } from './screen';
@@ -50,7 +54,7 @@ export function Home(p: ScreenProps & { tab: Tab }) {
       </div>
       <div className="tabs">{T('assets', t('home.tabAssets'))}{T('history', t('home.tabHistory'))}{T('agents', t('home.agents'), st.pending > 0 ? <span className="badge accent">{st.pending}</span> : null)}</div>
       {tab === 'assets' && <Assets bal={bal} rows={rows} />}
-      {tab === 'history' && <History accountId={account.id} st={p.st} />}
+      {tab === 'history' && <History account={account} st={p.st} />}
       {tab === 'agents' && <AgentsTab {...p} />}
     </div>
   );
@@ -110,6 +114,7 @@ export function HistoryList({ rows, showAccount }: { rows: HistoryRow[]; showAcc
         // 0.2.1: words instead of «sent» for a bridge / refuel / swap on the way (a multi-step operation that is
         // neither final nor waiting has a progress line); the line opens the operation page
         const st = h.progress ? t('hist.onTheWay') : st0;
+        if (h.chain) return <ChainLine key={h.request_id} h={h} showAccount={showAccount} />;
         return (
           <div key={h.request_id} className="list-item click" onClick={() => { location.hash = `#/op/${encodeURIComponent(h.request_id)}`; }}>
             <div className="row between">
@@ -128,11 +133,58 @@ export function HistoryList({ rows, showAccount }: { rows: HistoryRow[]; showAcc
   );
 }
 
-function History({ accountId, st }: { accountId: string; st: ScreenProps['st'] }) {
+/** 0.3.12: a token movement read from the chain (not started by this wallet): direction, amount, the other side. */
+function ChainLine({ h, showAccount }: { h: HistoryRow; showAccount?: boolean }) {
+  const c = h.chain!;
+  const sign = c.dir === 'in' ? '+' : c.dir === 'out' ? '−' : '';
+  return (
+    <div className="list-item click chain-row" title={t('hist.chainTitle')} onClick={() => { location.hash = `#/op/${encodeURIComponent(h.request_id)}`; }}>
+      <div className="row between">
+        <span className="num" style={{ fontWeight: 700 }}>{sign}{fmtAmt(String(h.intent?.amount ?? ''))} {h.intent?.asset ?? ''}</span>
+        <span className="badge">{t('hist.chainBadge')}</span>
+      </div>
+      <div className="row between small muted" style={{ marginTop: 2 }}>
+        <span>{c.dir === 'in' ? t('hist.chainIn') : c.dir === 'out' ? t('hist.chainOut') : t('hist.chainSelf')} {c.dir === 'in' ? '←' : '→'} {shortAddr(c.counterparty)} · {netLabel(h.network)}{showAccount && h.account ? ` · ${h.account.name}` : ''}</span>
+        <span>{c.estimated ? '≈ ' : ''}{fmtTime(new Date(h.at).toISOString())}</span>
+      </div>
+    </div>
+  );
+}
+
+/** Explorer pages of the account's addresses (our own list of explorers only). */
+function explorerLinks(a: AccountView): { label: string; url: string }[] {
+  const out: { label: string; url: string }[] = [];
+  for (const n of networksCfg.networks as any[]) {
+    if (!n.enabled || !n.explorer_addr) continue;
+    const addr = n.network === 'tron' ? a.addresses.tron : /^evm:/.test(n.network) ? a.addresses.evm : undefined;
+    if (!addr || !/^(T[1-9A-HJ-NP-Za-km-z]{33}|0x[0-9a-fA-F]{40})$/.test(addr)) continue;
+    if (n.network !== 'tron' && !['evm:1', 'evm:42161', 'evm:10', 'evm:137', 'evm:8453'].includes(n.network)) continue;
+    out.push({ label: netLabel(n.network), url: String(n.explorer_addr).replace('{addr}', addr) });
+  }
+  return out;
+}
+
+function History({ account, st }: { account: AccountView; st: ScreenProps['st'] }) {
+  const accountId = account.id;
   const [rows, setRows] = useState<HistoryRow[] | null>(null);
-  useEffect(() => { api<HistoryRow[]>({ cmd: 'history', account_id: accountId }).then(setRows).catch(() => setRows([])); }, [accountId, st]);
+  const [chain, setChain] = useState<ChainStatusView | null>(null);
+  const load = () => {
+    api<HistoryRow[]>({ cmd: 'history', account_id: accountId }).then(setRows).catch(() => setRows([]));
+    api<ChainStatusView>({ cmd: 'chainStatus', account_id: accountId }).then(setChain).catch(() => setChain(null));
+  };
+  useEffect(load, [accountId, st]); // eslint-disable-line react-hooks/exhaustive-deps
+  useWorkerChanged(load);
   if (!rows) return <div className="list"><div className="empty">{t('home.loading')}</div></div>;
-  return <HistoryList rows={rows} />;
+  return (
+    <div>
+      {chain?.loading && account.addresses.evm && <div className="small muted" style={{ marginBottom: 6 }}>{t('hist.loadingChain')}</div>}
+      <HistoryList rows={rows} />
+      {chain?.errors.map((e) => <div key={e.network} className="small subtle">{t('hist.chainErr', { net: netLabel(e.network), code: e.code })}</div>)}
+      <div className="small muted hist-note" style={{ marginTop: 8 }}>{t('hist.note')}{' '}
+        {explorerLinks(account).map((x, i) => <span key={x.url}>{i ? ' · ' : ''}<a className="link" href={x.url} target="_blank" rel="noreferrer">{x.label}</a></span>)}
+      </div>
+    </div>
+  );
 }
 
 /** Under the total: where the prices come from (all priced, none stale). */

@@ -91,7 +91,7 @@ export function SwapPanel({ st, account, nav }: ScreenProps) {
             <span className="k">{t('swap.rate')}</span><span className="num">{q.rate}</span>
             <span className="k">{t('swap.minOut')}</span><span className="num"><b>{q.amount_out_min} {get}</b></span>
             <span className="k">{t('swap.route')}</span><span>{q.route.map((x, i) => <div key={i}>{x.from} → {x.to} · {x.version} · {x.fee_pct} %</div>)}</span>
-            {q.reference && <><span className="k">{t('swap.ref')}</span><span>TRX = {q.reference.price_usd} USD{q.reference.deviation_bps !== null ? t('swap.dev', { dir: q.reference.deviation_bps <= 0 ? t('swap.better') : t('swap.worse'), pct: (Math.abs(q.reference.deviation_bps) / 100).toFixed(2) }) : ''}</span></>}
+            {q.reference && <><span className="k">{t('swap.ref')}</span><span>{t('swapr.refRate', { p: q.reference.price_usd, src: q.reference.source ?? t('swapr.exchanges') })}{q.reference.deviation_bps !== null ? t('swap.dev', { dir: q.reference.deviation_bps <= 0 ? t('swap.better') : t('swap.worse'), pct: (Math.abs(q.reference.deviation_bps) / 100).toFixed(2) }) : ''}</span></>}
           </div>
         )}
         {q && !q.ok && <div className="plate warn">{q.message} ({q.code})</div>}

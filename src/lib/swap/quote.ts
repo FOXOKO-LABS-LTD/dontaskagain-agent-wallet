@@ -78,8 +78,10 @@ export function pickPath(q: QuoteAnswer, c: SwapConfig, assetIn: SwapAsset, asse
   return null;
 }
 
-/** deviation of the quote from the market (TRX/USD of the exchanges, USDT ≈ USD), in bps; < 0 = better than
- * market. Decimals of TRX and USDT are both 6. */
+/** deviation of the quote from the reference rate, in bps; < 0 = better than the reference. Decimals of TRX and
+ * USDT are both 6. The Signer's reference is a TRX price in USD (market-data, or its price aggregator); the pair
+ * traded is TRX/USDT, so the price is taken as TRX/USDT under the assumption USDT ≈ USD (a USDT depeg would show up
+ * as a deviation — the window states the source and the time of the rate). */
 export function deviationBps(assetIn: SwapAsset, amountInRaw: bigint, amountOutRaw: bigint, priceUsd: string): number {
   const P = 1_000_000_000n; // fixed point for the price
   const [i, f = ''] = priceUsd.trim().split('.');

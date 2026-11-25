@@ -7,7 +7,7 @@ import { DirectEvmReader, E2EEvmReader, E2ETronReader, type ReadLog } from '../l
 import { Gateway } from '../lib/e2e/gateway';
 import { decideE2E, e2eActive, e2eDirectReads, e2eRequest, isE2EId, knownAddresses, ownE2E, plaintextPolicy } from './e2e';
 import { originMark } from '../lib/e2e/protocol';
-import { buildOp, finishText, isFinal, type OpView } from '../lib/op';
+import { buildOp, doneText, finishText, isFinal, type OpView } from '../lib/op';
 import { DirectRoute, ProxyRoute } from '../lib/resources/plan';
 import { signTronTxId } from '../lib/sign';
 import { bookMatch } from '../lib/similar';
@@ -16,7 +16,7 @@ import { checkDecodedAgainstIntent, prepareTronTransfer, type PreparedTron, type
 import { decodeRaw } from '../lib/tron/tx';
 import { normalizeTron } from '../lib/tron/address';
 import { decodePaymentRequired, pickResourceTerms, signResourcePayment } from '../lib/x402/pay';
-import { directReadsOn, evmRpcOf, tronNodeOf } from '../lib/wallet/model';
+import { directReadsOn, evmRpcsOf, tronNodeOf } from '../lib/wallet/model';
 import type { HistoryRow, PreparedView, RequestRow } from '../shared/api';
 import { findRepeat, type RequestLike } from '../lib/guard';
 import { notificationText } from '../lib/requestLabel';
@@ -49,7 +49,7 @@ export async function readers(): Promise<{ tron: TronReader; evm: EvmReader; x40
     const known = await knownAddresses();
     return {
       tron: new E2ETronReader(relayTron, new DirectTronReader(ownNode), () => known, viaSigner, readLog),
-      evm: new E2EEvmReader(relayEvm, new DirectEvmReader((id) => evmRpcOf(st, id)), () => known, viaSigner, readLog),
+      evm: new E2EEvmReader(relayEvm, new DirectEvmReader((id) => evmRpcsOf(st, id)), () => known, viaSigner, readLog),
       x402: new Gateway(() => st.x402_gateway_url || e2eCfg.x402_gateway_url),
     };
   }
@@ -319,7 +319,7 @@ export async function onRequestUpdate(m: any): Promise<void> {
     await putServerRequests([{ req: { ...e.request, ...(full ?? {}), status: m.status ?? full?.status ?? e.request.status, decision: m.decision ?? full?.decision ?? e.request.decision,
       resources: m.resources ?? full?.resources ?? e.request.resources, error: m.error ?? full?.error ?? e.request.error } }]);
     const now = (await getSession()).requests?.[m.request_id]?.request;
-    const fin = now && !wasFinal ? finishText(now) : null;
+    const fin = now && !wasFinal ? (finishText(now) ?? doneText(now)) : null;
     if (fin) notify(`op:${m.request_id}`, fin.title, fin.message);
   } else if (full && !full.parent_request_id && full.status !== 'pending') {
     await putServerRequests([{ req: full, receivedAt: Date.parse(full.created_at ?? '') || Date.now() }]);

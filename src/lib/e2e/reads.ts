@@ -52,6 +52,7 @@ export function evmReadIsSafe(method: string, params: unknown[], k: Known): bool
     if (method === 'eth_getBlockByNumber') return params?.[1] !== true; // headers only, no transactions
     return true;
   }
+  if (method === 'eth_getLogs') return logsFilterIsSafe(params, k);
   if (method === 'eth_getBalance') return typeof params?.[0] === 'string' && k.evm.has(String(params[0]).toLowerCase());
   if (method === 'eth_call') {
     const c = params?.[0] as any;
@@ -74,6 +75,30 @@ export function evmReadIsSafe(method: string, params: unknown[], k: Known): bool
   return false;
 }
 
+/** 0.3.12: the account's token history — a Transfer filter over listed token contracts whose address topics are own
+ * addresses only, a bounded hex range (the same form the Signer's relay admits). */
+const TRANSFER = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+function logsFilterIsSafe(params: unknown[], k: Known): boolean {
+  if (!Array.isArray(params) || params.length !== 1) return false;
+  const f = params[0] as any;
+  if (!f || typeof f !== 'object' || Object.keys(f).some((x) => !['fromBlock', 'toBlock', 'address', 'topics'].includes(x))) return false;
+  const from = /^0x[0-9a-f]{1,16}$/i.test(String(f.fromBlock)) ? Number.parseInt(f.fromBlock, 16) : NaN;
+  const to = /^0x[0-9a-f]{1,16}$/i.test(String(f.toBlock)) ? Number.parseInt(f.toBlock, 16) : NaN;
+  if (!(to - from >= 0 && to - from <= 10_000)) return false;
+  const addrs: unknown[] = Array.isArray(f.address) ? f.address : [f.address];
+  if (!addrs.length || addrs.length > 8 || !addrs.every((a) => k.evmContracts.has(String(a).toLowerCase()))) return false;
+  const t: unknown[] = Array.isArray(f.topics) ? f.topics : [];
+  if (t.length < 1 || t.length > 3 || String(t[0]).toLowerCase() !== TRANSFER) return false;
+  for (const pos of t.slice(1)) {
+    if (pos === null) continue;
+    for (const w of Array.isArray(pos) ? pos : [pos]) {
+      const s = String(w).toLowerCase();
+      if (!/^0x0{24}[0-9a-f]{40}$/.test(s) || !k.evm.has(`0x${s.slice(26)}`)) return false;
+    }
+  }
+  return true;
+}
+
 /** Logged decisions (tests read them: a recipient or an amount must never reach the relay). */
 export interface ReadLog { via: 'relay' | 'direct'; kind: 'tron' | 'evm'; method: string; body: unknown }
 
@@ -86,15 +111,27 @@ export class E2ETronReader implements TronReader {
   }
 }
 
+/** 0.3.12: several RPCs per network — an RPC that fails, answers a JSON-RPC error (a provider refusing what it should
+ * serve) or has no receipt yet is followed by the next; with no better answer the first error (a revert stays one). */
+const NULL_MAY_LAG = new Set(['eth_getTransactionReceipt', 'eth_getTransactionByHash']);
 export class DirectEvmReader implements EvmReader {
   private id = 1;
-  constructor(private urlOf: (chainId: number) => string | undefined) {}
+  constructor(private urlOf: (chainId: number) => string | string[] | undefined) {}
   async rpc(chainId: number, method: string, params: unknown[]) {
-    const url = this.urlOf(chainId);
-    if (!url) throw new HttpError(503, 'RPC_NOT_CONFIGURED', `no RPC for network ${chainId} in the settings (E2E: direct reads)`);
-    const r = await postJSON(url, { jsonrpc: '2.0', id: this.id++, method, params });
-    if (r?.error) throw new HttpError(502, 'RPC_ERROR', r.error.message ?? 'rpc error', r);
-    return r.result;
+    const u = this.urlOf(chainId);
+    const urls = (Array.isArray(u) ? u : u ? [u] : []).filter(Boolean);
+    if (!urls.length) throw new HttpError(503, 'RPC_NOT_CONFIGURED', `no RPC for network ${chainId} in the settings (E2E: direct reads)`);
+    let firstErr: HttpError | null = null, sawNull = false, lastNet: unknown = null;
+    for (const url of urls) {
+      let r: any;
+      try { r = await postJSON(url, { jsonrpc: '2.0', id: this.id++, method, params }); } catch (e) { lastNet = e; continue; }
+      if (r?.error) { firstErr ??= new HttpError(502, 'RPC_ERROR', r.error.message ?? 'rpc error', r); continue; }
+      if (NULL_MAY_LAG.has(method) && (r?.result === null || r?.result === undefined)) { sawNull = true; continue; }
+      return r.result;
+    }
+    if (sawNull) return null;
+    if (firstErr) throw firstErr;
+    throw lastNet instanceof Error ? lastNet : new HttpError(503, 'RPC_UNAVAILABLE', 'no RPC answered');
   }
 }
 

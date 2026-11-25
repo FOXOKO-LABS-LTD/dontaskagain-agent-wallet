@@ -56,6 +56,19 @@ export function useStatus(): [StatusView | null, () => void] {
   return [st, load];
 }
 
+/** 0.3.12: re-read on every worker change (`changed`), even when the status object itself stayed the same — an
+ * operation's steps and the history move without changing the status. */
+export function useWorkerChanged(f: () => void): void {
+  const ref = useRef(f);
+  ref.current = f;
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const l = (m: any) => { if (m?.event === 'changed') { if (t) clearTimeout(t); t = setTimeout(() => ref.current(), 120); } };
+    chrome.runtime.onMessage.addListener(l);
+    return () => { chrome.runtime.onMessage.removeListener(l); if (t) clearTimeout(t); };
+  }, []);
+}
+
 // ---------- activity (auto-lock counts only the human's actions) ----------
 // Real input in any of our pages (popup, side panel, sign window) is activity: at most one `touch` per 15 s. Opening a
 // view is NOT (0.3.2): the sign window is opened by the worker when an agent asks, not by the human.

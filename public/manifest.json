@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_appName__",
-  "version": "0.3.11",
+  "version": "0.3.12",
   "description": "__MSG_appDesc__",
   "default_locale": "en",
   "minimum_chrome_version": "116",
@@ -38,7 +38,11 @@
     "http://localhost/*",
     "https://api.awesomefee.com/*",
     "https://open.sun.io/*",
-    "https://*.publicnode.com/*"
+    "https://*.publicnode.com/*",
+    "https://arb1.arbitrum.io/*",
+    "https://mainnet.base.org/*",
+    "https://mainnet.optimism.io/*",
+    "https://*.drpc.org/*"
   ],
   "optional_host_permissions": [
     "http://*/*",

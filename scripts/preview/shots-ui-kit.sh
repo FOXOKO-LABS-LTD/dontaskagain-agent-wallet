@@ -44,6 +44,13 @@ for TH in light dark; do for L in ru en; do
   for CL in claude codex json; do
     shot panel-$N-15-connect-$CL 420,2600 "$B/panel.html?$P&e2e=1&client=$CL&act=type:input=claude-bot|click:.btn.primary|click:.btn.primary|click:.btn.primary|wait:400|click:details%20summary|wait:200#/agents/new"
   done
+  # 0.3.12: E2E with the public Signer — History (own operations + chain rows), the operation pages
+  shot popup-$N-16-e2e-history    360,600  "$B/popup.html?$P&e2e=public#/history"
+  shot panel-$N-16-e2e-history    420,1100 "$B/panel.html?$P&e2e=public#/history"
+  shot popup-$N-17-e2e-op-progress 360,600 "$B/popup.html?$P&e2e=public#/op/op_e2e_run"
+  shot panel-$N-17-e2e-op-progress 420,1000 "$B/panel.html?$P&e2e=public#/op/op_e2e_run"
+  shot panel-$N-18-e2e-op-done    420,1000 "$B/panel.html?$P&e2e=public#/op/op_e2e_done"
+  shot panel-$N-19-e2e-op-chain   420,900  "$B/panel.html?$P&e2e=public#/op/chain%3Aevm%3A8453%3A0x9a9a%3A3"
   # sign window
   shot sign-$N-01-top          460,760  "$B/sign.html?$P"
   shot sign-$N-02-full         460,1500 "$B/sign.html?$P"

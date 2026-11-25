@@ -78,7 +78,7 @@ function App() {
   if (!st) return null;
   if (!st.initialized) return <div className="app"><div className="subbar"><h1 className="brand-h"><BrandLogo /></h1><span className="grow" /><LangSwitch /></div><div className="scroll"><Onboarding onDone={reload} /></div></div>;
   if (path.startsWith('/sign')) return (
-    <div className="app"><Sub path="/sign" nav={nav}><div className="screen"><SignQueue st={st} reload={reload} initial={path.split('/')[2]} onClose={() => nav('/agents')} mascots /></div></Sub></div>
+    <div className="app"><Sub path="/sign" nav={nav}><div className="screen"><SignQueue st={st} reload={reload} initial={path.split('/')[2]} onClose={() => nav('/agents')} mascots onSigned={(id) => nav(`/op/${encodeURIComponent(id)}`)} openOp={(id) => nav(`/op/${encodeURIComponent(id)}`)} /></div></Sub></div>
   );
   if (!st.unlocked) return (
     <div className="app">
