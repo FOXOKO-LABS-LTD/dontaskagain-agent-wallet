@@ -114,7 +114,7 @@ describe('E2E mode', () => {
     expect(m.key_mode).toBe('agent');
     expect(r.claude).toContain(`DAA_WALLET=${walletKey}`);
     expect(r.claude).toMatch(/DAA_PAIR=[A-Za-z0-9_-]{22}/);
-    expect(r.claude).toContain('-- npx -y -p https://dontaskagain.xyz/dl/dontaskagain-mcp-0.1.4.tgz dontaskagain-mcp'); // 0.3.8: the site archive until npm
+    expect(r.claude).toContain('-- npx -y dontaskagain-mcp@0.1.4'); // 0.3.11: from npm (the site archive before)
     expect(r.e2e.wallet_fp).toBe(walletFp);
     expect(envOf(r.claude, 'DAA_URL')).toBe(mock.url);
     agent = new Agent(r.id, envOf(r.claude, 'DAA_WALLET'));

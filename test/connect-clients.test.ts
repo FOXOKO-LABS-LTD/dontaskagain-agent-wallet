@@ -1,6 +1,6 @@
 // 0.3.8 : the wizard connects the agent in Claude Code, Codex (command + ~/.codex/config.toml) or any other
 // stdio client (JSON). Same rules for all three: the secrets stay in the 600 file, the command line carries only
-// DAA_CONFIG (the fallback one-liner aside); the package source is the site archive until npm, the field overrides it.
+// DAA_CONFIG (the fallback one-liner aside); the package source is npm (0.3.11; the site archive before), the field overrides it.
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -12,6 +12,7 @@ import {
 import mcpCfg from '../src/config/mcp.json';
 
 const URL_ = 'https://dontaskagain.xyz/dl/dontaskagain-mcp-0.1.4.tgz';
+const PKG = 'dontaskagain-mcp@0.1.4';
 const base: ConnectInput = { name: 'dontaskagain-bot', url: 'https://wallet.example/', token: 'aw_ag_1_TOKEN', launch: { kind: 'npx' },
   e2e: { wallet: 'SIG.KEX', wallet_id: 'wal_x', pair: 'PAIRCODE' } };
 
@@ -26,17 +27,20 @@ function parseToml(src: string): any {
 }
 
 describe('package source (mcp.json)', () => {
-  it('pinned version; the site archive until npm; the field (path or URL) overrides', () => {
+  it('pinned version; from npm (0.3.11); the field (path or URL) overrides; the site archive stays a fallback', () => {
     expect(mcpCfg.npx_package).toMatch(/^dontaskagain-mcp@\d+\.\d+\.\d+$/);
+    expect(mcpCfg.npx_package).toBe(PKG);
     expect(mcpCfg.npx_url).toBe(`https://dontaskagain.xyz/dl/dontaskagain-mcp-${mcpCfg.npx_package.split('@')[1]}.tgz`);
-    expect(mcpCfg.npm_published).toBe(false);
-    expect(npxArgs()).toEqual(['-y', '-p', URL_, 'dontaskagain-mcp']);
+    expect(mcpCfg.npm_published).toBe(true);
+    expect(npxArgs()).toEqual(['-y', PKG]);
     expect(npxArgs('  /opt/my pkgs/d.tgz ')).toEqual(['-y', '-p', '/opt/my pkgs/d.tgz', 'dontaskagain-mcp']);
     expect(npxArgs('https://mirror.example/d.tgz')).toEqual(['-y', '-p', 'https://mirror.example/d.tgz', 'dontaskagain-mcp']);
-    expect(npxArgs('', { published: true, url: URL_, pkg: 'dontaskagain-mcp@0.1.4' })).toEqual(['-y', 'dontaskagain-mcp@0.1.4']);
-    expect(npxArgs('/x.tgz', { published: true, url: URL_, pkg: 'dontaskagain-mcp@0.1.4' })).toEqual(['-y', '-p', '/x.tgz', 'dontaskagain-mcp']);
-    expect(npxDefaultCommand()).toBe(`npx -y -p ${URL_} dontaskagain-mcp`);
-    expect(launchArgv({ kind: 'npx', path: '' })).toEqual({ command: 'npx', args: ['-y', '-p', URL_, 'dontaskagain-mcp'] });
+    expect(npxArgs(URL_)).toEqual(['-y', '-p', URL_, 'dontaskagain-mcp']); // the site archive by hand
+    expect(npxArgs('', { published: false, url: URL_, pkg: PKG })).toEqual(['-y', '-p', URL_, 'dontaskagain-mcp']);
+    expect(npxArgs('/x.tgz', { published: true, url: URL_, pkg: PKG })).toEqual(['-y', '-p', '/x.tgz', 'dontaskagain-mcp']);
+    expect(npxDefaultCommand()).toBe(`npx -y ${PKG}`);
+    expect(launchArgv({ kind: 'npx', path: '' })).toEqual({ command: 'npx', args: ['-y', PKG] });
+    expect(launchArgv({ kind: 'npx', path: URL_ })).toEqual({ command: 'npx', args: ['-y', '-p', URL_, 'dontaskagain-mcp'] });
   });
   it('clients', () => {
     expect(MCP_CLIENTS).toEqual(['claude', 'codex', 'json']);
@@ -48,17 +52,17 @@ describe('package source (mcp.json)', () => {
 describe('npx (E2E): the three clients', () => {
   it('Claude Code: file steps + claude mcp add by DAA_CONFIG, no secret', () => {
     const s = npxConfigSteps(base, 'claude');
-    expect(s).toBe(`${npxFileSteps(base)}\nclaude mcp add -s user dontaskagain-bot -e DAA_CONFIG=~/.dontaskagain/dontaskagain-bot.env -- npx -y -p ${URL_} dontaskagain-mcp`);
+    expect(s).toBe(`${npxFileSteps(base)}\nclaude mcp add -s user dontaskagain-bot -e DAA_CONFIG=~/.dontaskagain/dontaskagain-bot.env -- npx -y ${PKG}`);
     for (const secret of ['aw_ag_1_TOKEN', 'PAIRCODE', 'SIG.KEX']) expect(s).not.toContain(secret);
   });
 
   it('Codex: command, config.toml with timeouts, list/get check; no secret', () => {
-    expect(codexAdd(base)).toBe(`codex mcp add dontaskagain-bot --env DAA_CONFIG=~/.dontaskagain/dontaskagain-bot.env -- npx -y -p ${URL_} dontaskagain-mcp`);
+    expect(codexAdd(base)).toBe(`codex mcp add dontaskagain-bot --env DAA_CONFIG=~/.dontaskagain/dontaskagain-bot.env -- npx -y ${PKG}`);
     expect(npxConfigSteps(base, 'codex')).toBe(`${npxFileSteps(base)}\n${codexAdd(base)}`);
     const toml = codexToml(base);
     expect(toml).toBe('[mcp_servers.dontaskagain-bot]\n'
       + 'command = "npx"\n'
-      + `args = ["-y", "-p", "${URL_}", "dontaskagain-mcp"]\n`
+      + `args = ["-y", "${PKG}"]\n`
       + 'env = { DAA_CONFIG = "~/.dontaskagain/dontaskagain-bot.env" }\n'
       + 'startup_timeout_sec = 60\n'
       + 'tool_timeout_sec = 330\n');
@@ -69,17 +73,17 @@ describe('npx (E2E): the three clients', () => {
     expect(codexRemove('dontaskagain-bot')).toBe('codex mcp remove dontaskagain-bot');
     expect(codexReplace('agent-wallet', base)).toBe(`codex mcp remove agent-wallet && ${codexAdd(base)}`);
     const parsed = parseToml(toml);
-    if (parsed) expect(parsed).toEqual({ mcp_servers: { 'dontaskagain-bot': { command: 'npx', args: ['-y', '-p', URL_, 'dontaskagain-mcp'], env: { DAA_CONFIG: '~/.dontaskagain/dontaskagain-bot.env' }, startup_timeout_sec: 60, tool_timeout_sec: 330 } } });
+    if (parsed) expect(parsed).toEqual({ mcp_servers: { 'dontaskagain-bot': { command: 'npx', args: ['-y', PKG], env: { DAA_CONFIG: '~/.dontaskagain/dontaskagain-bot.env' }, startup_timeout_sec: 60, tool_timeout_sec: 330 } } });
   });
 
   it('Codex fallback one-liner carries the secrets (warned in the wizard), quoted', () => {
     const f = codexAdd(base, { inline: true })!;
-    expect(f).toBe(`codex mcp add dontaskagain-bot --env DAA_URL=https://wallet.example/ --env DAA_TOKEN=aw_ag_1_TOKEN --env DAA_WALLET=SIG.KEX --env DAA_WALLET_ID=wal_x --env DAA_PAIR=PAIRCODE -- npx -y -p ${URL_} dontaskagain-mcp`);
+    expect(f).toBe(`codex mcp add dontaskagain-bot --env DAA_URL=https://wallet.example/ --env DAA_TOKEN=aw_ag_1_TOKEN --env DAA_WALLET=SIG.KEX --env DAA_WALLET_ID=wal_x --env DAA_PAIR=PAIRCODE -- npx -y ${PKG}`);
     expect(codexAdd({ ...base, token: "a b'c" }, { inline: true })).toContain(`--env 'DAA_TOKEN=a b'\\''c'`);
   });
 
   it('JSON: mcpServers stdio block by DAA_CONFIG; file steps without a client command', () => {
-    expect(JSON.parse(mcpJson(base))).toEqual({ mcpServers: { 'dontaskagain-bot': { command: 'npx', args: ['-y', '-p', URL_, 'dontaskagain-mcp'], env: { DAA_CONFIG: '~/.dontaskagain/dontaskagain-bot.env' } } } });
+    expect(JSON.parse(mcpJson(base))).toEqual({ mcpServers: { 'dontaskagain-bot': { command: 'npx', args: ['-y', PKG], env: { DAA_CONFIG: '~/.dontaskagain/dontaskagain-bot.env' } } } });
     expect(npxFileSteps(base)).toBe('mkdir -p -m 700 ~/.dontaskagain\nmv ~/Downloads/dontaskagain-bot.env ~/.dontaskagain/ && chmod 600 ~/.dontaskagain/dontaskagain-bot.env');
     expect(mcpJson(base)).not.toContain('aw_ag_1_TOKEN');
   });

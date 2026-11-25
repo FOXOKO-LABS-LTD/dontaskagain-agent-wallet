@@ -142,7 +142,7 @@ export interface Settings {
   agents_paused: boolean;      // «Pause all agents» — incoming agent requests are refused locally (code paused)
   /** 0.2.1: how the MCP server is started on the agent's machine (the last choice; commands are built from it) */
   mcp_launch?: McpLaunch;
-  mcp_launch_path?: string;    // mcp_launch 'npx': an archive path or URL (overrides the site archive)
+  mcp_launch_path?: string;    // mcp_launch 'npx': an archive path or URL (overrides the npm package)
   /** 0.3.8: the MCP client on the agent's machine the wizard prints commands for (the last choice) */
   mcp_client?: 'claude' | 'codex' | 'json';
   // ---- 0.3.0, E2E ----

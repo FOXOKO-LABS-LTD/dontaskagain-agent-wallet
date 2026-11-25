@@ -106,7 +106,7 @@ export const agents = {
   'conn.optNpxNote': 'пакет dontaskagain-mcp: ключ агента рождается у агента, запросы подписаны и зашифрованы — оператор Signer их не видит',
   'conn.optRemote': 'удалённый MCP по адресу',
   'conn.optRemoteNote': 'проще всего, но ключ агента у сервера: оператор видит запросы этого агента, подпись — только ваша вручную',
-  'conn.npxPathPh': 'путь или URL архива …/dontaskagain-mcp-<версия>.tgz',
+  'conn.npxPathPh': 'пусто — из npm; или путь или URL архива …/dontaskagain-mcp-<версия>.tgz',
   'conn.npxStep1': '1. Скачайте файл подключения',
   'conn.npxDownload': 'Скачать {file}',
   'conn.npxFileNote': 'В файле — адрес Signer, токен агента, ключ кошелька (DAA_WALLET), id кошелька (DAA_WALLET_ID) и одноразовый код сопряжения (DAA_PAIR). Перенесите его на машину агента; в командную строку секреты не попадают.',

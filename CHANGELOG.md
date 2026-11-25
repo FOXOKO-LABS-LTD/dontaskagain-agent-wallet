@@ -3,6 +3,10 @@
 All notable changes to the Don't Ask Again Chrome extension. Versions before the first public release were
 distributed as early-access zip archives.
 
+## 0.3.11 — 2026-11-25
+- `dontaskagain-mcp` is on npm: the wizard runs `npx -y dontaskagain-mcp@0.1.4` for Claude Code, Codex and JSON.
+  The path or URL field still overrides it (for example the same version's archive from the website).
+
 ## 0.3.10 — 2026-11-25
 - Agents connect only with a key of their own: `dontaskagain-mcp` through npx (recommended) or the Signer's remote
   MCP endpoint, for Claude Code, Codex or any MCP client (JSON). Both need end-to-end encryption with the Signer;

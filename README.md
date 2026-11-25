@@ -67,19 +67,24 @@ on the agent's machine and requests are end-to-end encrypted). The wizard gives 
 `dontaskagain-<name>.env` (mode 600; it holds the Signer address, the agent token, the wallet key and a one-time
 pairing code) and the exact commands. Keep the token and the pairing code out of chats and command lines.
 
-Until `dontaskagain-mcp` is published on npm, the package runs from the website archive:
+The agent side is the [`dontaskagain-mcp`](https://www.npmjs.com/package/dontaskagain-mcp) package from npm
+(source: [FOXOKO-LABS-LTD/dontaskagain-mcp](https://github.com/FOXOKO-LABS-LTD/dontaskagain-mcp)), pinned to the
+version the wizard was tested with:
 
 ```
-npx -y -p https://dontaskagain.xyz/dl/dontaskagain-mcp-0.1.4.tgz dontaskagain-mcp
+npx -y dontaskagain-mcp@0.1.4
 ```
+
+Without access to the npm registry, the same version runs from the website archive — put its path or URL in the
+wizard's field: `npx -y -p https://dontaskagain.xyz/dl/dontaskagain-mcp-0.1.4.tgz dontaskagain-mcp`.
 
 **Claude Code**
 
 ```bash
 mkdir -p -m 700 ~/.dontaskagain
 mv ~/Downloads/dontaskagain-<name>.env ~/.dontaskagain/ && chmod 600 ~/.dontaskagain/dontaskagain-<name>.env
-claude mcp add -s user dontaskagain-<name> -e DAA_CONFIG=~/.dontaskagain/dontaskagain-<name>.env -- npx -y -p https://dontaskagain.xyz/dl/dontaskagain-mcp-0.1.4.tgz dontaskagain-mcp
-DAA_CONFIG=~/.dontaskagain/dontaskagain-<name>.env npx -y -p https://dontaskagain.xyz/dl/dontaskagain-mcp-0.1.4.tgz dontaskagain-mcp whoami
+claude mcp add -s user dontaskagain-<name> -e DAA_CONFIG=~/.dontaskagain/dontaskagain-<name>.env -- npx -y dontaskagain-mcp@0.1.4
+DAA_CONFIG=~/.dontaskagain/dontaskagain-<name>.env npx -y dontaskagain-mcp@0.1.4 whoami
 ```
 
 **OpenAI Codex** (CLI and IDE extension share `~/.codex/config.toml`) — the same two file lines, then:
@@ -87,7 +92,7 @@ DAA_CONFIG=~/.dontaskagain/dontaskagain-<name>.env npx -y -p https://dontaskagai
 ```toml
 [mcp_servers.dontaskagain-<name>]
 command = "npx"
-args = ["-y", "-p", "https://dontaskagain.xyz/dl/dontaskagain-mcp-0.1.4.tgz", "dontaskagain-mcp"]
+args = ["-y", "dontaskagain-mcp@0.1.4"]
 env = { DAA_CONFIG = "~/.dontaskagain/dontaskagain-<name>.env" }
 startup_timeout_sec = 60
 tool_timeout_sec = 330
@@ -102,7 +107,7 @@ tool_timeout_sec = 330
   "mcpServers": {
     "dontaskagain-<name>": {
       "command": "npx",
-      "args": ["-y", "-p", "https://dontaskagain.xyz/dl/dontaskagain-mcp-0.1.4.tgz", "dontaskagain-mcp"],
+      "args": ["-y", "dontaskagain-mcp@0.1.4"],
       "env": { "DAA_CONFIG": "~/.dontaskagain/dontaskagain-<name>.env" }
     }
   }

@@ -24,17 +24,17 @@ describe('agent connection commands', () => {
     const c = { name: 'dontaskagain-bot', url: 'https://wallet.example', token: 'aw_ag_1_TOKEN', launch: { kind: 'npx' as const } };
     expect(claudeRemove('dontaskagain-bot')).toBe('claude mcp remove -s user dontaskagain-bot');
     expect(claudeReplace(LEGACY_MCP_NAME, c)).toBe(`claude mcp remove -s user agent-wallet && ${claudeAdd(c)}`);
-    expect(claudeAdd({ ...c, launch: { kind: 'npx' } })).toMatch(/ -- npx -y -p https:\/\/dontaskagain\.xyz\/dl\/dontaskagain-mcp-0\.1\.4\.tgz dontaskagain-mcp$/); // 0.3.8: the site archive until npm
-    expect(JSON.parse(mcpJson({ ...c, launch: { kind: 'npx' } })).mcpServers['dontaskagain-bot']).toEqual({ command: 'npx', args: ['-y', '-p', 'https://dontaskagain.xyz/dl/dontaskagain-mcp-0.1.4.tgz', 'dontaskagain-mcp'], env: { DAA_CONFIG: '~/.dontaskagain/dontaskagain-bot.env' } });
+    expect(claudeAdd({ ...c, launch: { kind: 'npx' } })).toMatch(/ -- npx -y dontaskagain-mcp@0\.1\.4$/); // 0.3.11: from npm (the site archive before)
+    expect(JSON.parse(mcpJson({ ...c, launch: { kind: 'npx' } })).mcpServers['dontaskagain-bot']).toEqual({ command: 'npx', args: ['-y', 'dontaskagain-mcp@0.1.4'], env: { DAA_CONFIG: '~/.dontaskagain/dontaskagain-bot.env' } });
     // 0.3.3 (dontaskagain-mcp 0.1.1): the secrets in a downloaded file, the MCP added by DAA_CONFIG, whoami to compare
     const e = { ...c, launch: { kind: 'npx' as const }, e2e: { wallet: 'SIG.KEX', wallet_id: 'wal_x', pair: 'PAIRCODE' } };
     expect(envFileName(e)).toBe('dontaskagain-bot.env');
     expect(envFile(e)).toBe('DAA_URL=https://wallet.example\nDAA_TOKEN=aw_ag_1_TOKEN\nDAA_WALLET=SIG.KEX\nDAA_WALLET_ID=wal_x\nDAA_PAIR=PAIRCODE\n');
     expect(npxConfigSteps(e)).toBe('mkdir -p -m 700 ~/.dontaskagain\nmv ~/Downloads/dontaskagain-bot.env ~/.dontaskagain/ && chmod 600 ~/.dontaskagain/dontaskagain-bot.env\n'
-      + 'claude mcp add -s user dontaskagain-bot -e DAA_CONFIG=~/.dontaskagain/dontaskagain-bot.env -- npx -y -p https://dontaskagain.xyz/dl/dontaskagain-mcp-0.1.4.tgz dontaskagain-mcp');
+      + 'claude mcp add -s user dontaskagain-bot -e DAA_CONFIG=~/.dontaskagain/dontaskagain-bot.env -- npx -y dontaskagain-mcp@0.1.4');
     expect(npxConfigSteps(e)).not.toContain('aw_ag_1_TOKEN');
-    expect(npxWhoami(e)).toBe('DAA_CONFIG=~/.dontaskagain/dontaskagain-bot.env npx -y -p https://dontaskagain.xyz/dl/dontaskagain-mcp-0.1.4.tgz dontaskagain-mcp whoami');
-    expect(claudeAdd(e)).toContain('-e DAA_WALLET_ID=wal_x -e DAA_PAIR=PAIRCODE -- npx -y -p https://dontaskagain.xyz/dl/dontaskagain-mcp-0.1.4.tgz dontaskagain-mcp');
+    expect(npxWhoami(e)).toBe('DAA_CONFIG=~/.dontaskagain/dontaskagain-bot.env npx -y dontaskagain-mcp@0.1.4 whoami');
+    expect(claudeAdd(e)).toContain('-e DAA_WALLET_ID=wal_x -e DAA_PAIR=PAIRCODE -- npx -y dontaskagain-mcp@0.1.4');
     expect(npxWhoami({ ...e, launch: { kind: 'npx', path: '/opt/d.tgz' } })).toBe('DAA_CONFIG=~/.dontaskagain/dontaskagain-bot.env npx -y -p /opt/d.tgz dontaskagain-mcp whoami');
     expect(shq("it's")).toBe(`'it'\\''s'`);
   });

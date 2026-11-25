@@ -1,6 +1,6 @@
 {
   "name": "dontaskagain-agent-wallet",
-  "version": "0.3.10",
+  "version": "0.3.11",
   "private": true,
   "type": "module",
   "description": "Don't Ask Again — Chrome extension (MV3): the human's wallet for AI agents. Agents ask, the human signs every transaction; keys never leave the browser.",

@@ -108,7 +108,7 @@ export const agents: { [K in keyof typeof R]: Entry } = {
   'conn.optNpxNote': 'the dontaskagain-mcp package: the agent’s key is born at the agent, requests are signed and encrypted — the Signer operator cannot see them',
   'conn.optRemote': 'remote MCP by URL',
   'conn.optRemoteNote': 'the simplest, but the agent’s key is on the server: the operator sees this agent’s requests, signing is manual only',
-  'conn.npxPathPh': 'archive path or URL …/dontaskagain-mcp-<version>.tgz',
+  'conn.npxPathPh': 'empty — from npm; or an archive path or URL …/dontaskagain-mcp-<version>.tgz',
   'conn.npxStep1': '1. Download the connection file',
   'conn.npxDownload': 'Download {file}',
   'conn.npxFileNote': 'The file holds the Signer URL, the agent token, the wallet key (DAA_WALLET), the wallet id (DAA_WALLET_ID) and the one-time pairing code (DAA_PAIR). Move it to the agent machine; no secret goes on a command line.',

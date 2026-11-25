@@ -40,8 +40,9 @@ export const LAUNCH_OPTIONS: { kind: McpLaunch; label: string; note: string; soo
   { kind: 'remote', get label() { return t('conn.optRemote'); }, get note() { return t('conn.optRemoteNote'); }, e2e: true },
 ];
 
-/** The package with its exact version (config/mcp.json), its bin and — until the npm publication — the
- * archive on the site: `npx -y -p <url|path> dontaskagain-mcp`. `npm_published: true` → `npx -y dontaskagain-mcp@<v>`. */
+/** The package with its exact version (config/mcp.json) and its bin. `npm_published: true` (0.3.11) →
+ * `npx -y dontaskagain-mcp@<v>` from npm; the same version's archive on the site (`npx -y -p <url> dontaskagain-mcp`)
+ * stays a fallback: the human's path/URL, or the default again with `npm_published: false`. */
 export const NPX_PACKAGE: string = mcpCfg.npx_package;
 export const NPX_BIN: string = mcpCfg.npx_bin;
 export const NPX_URL: string = mcpCfg.npx_url;
@@ -53,7 +54,7 @@ export const CONFIG_DIR: string = mcpCfg.config_dir;
 export const CODEX_STARTUP_TIMEOUT_SEC: number = mcpCfg.codex_startup_timeout_sec;
 export const CODEX_TOOL_TIMEOUT_SEC: number = mcpCfg.codex_tool_timeout_sec;
 
-/** The npx arguments of the package: the human's path/URL → the site archive (before npm) → the npm name. */
+/** The npx arguments of the package: the human's path/URL → the npm name (or the site archive while not on npm). */
 export function npxArgs(path?: string, cfg: { published: boolean; url: string; pkg: string } = { published: NPM_PUBLISHED, url: NPX_URL, pkg: NPX_PACKAGE }): string[] {
   const p = (path ?? '').trim();
   if (p) return ['-y', '-p', p, NPX_BIN];
