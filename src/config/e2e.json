@@ -1,0 +1,22 @@
+{
+  "_comment": "Public Signer with end-to-end encryption. public_signer_url: the public Signer (invite-only registration). No built-in TRON node: TRON reads go through the Signer, or straight to a node the human sets; EVM RPC defaults below (used for direct reads only), each overridable in Settings.",
+  "public_signer_url": "https://signer.dontaskagain.xyz",
+  "public_signer_placeholder": false,
+  "x402_gateway_url": "https://api.awesomefee.com/x402/v1",
+  "_tron_node": "0.3.9: there is no built-in TRON node. Reads go through the Signer unless the human sets a TRON node of their own (https; plain http only to localhost / a private network) — only then can reads go to it directly.",
+  "tron_node_legacy_defaults": [
+    "https://api.trongrid.io"
+  ],
+  "sunio_quote_url": "https://open.sun.io/apiv2/quote/swap/routerUniversal",
+  "evm_rpc": {
+    "1": "https://ethereum-rpc.publicnode.com",
+    "42161": "https://arbitrum-one-rpc.publicnode.com",
+    "10": "https://optimism-rpc.publicnode.com",
+    "137": "https://polygon-bor-rpc.publicnode.com",
+    "8453": "https://base-rpc.publicnode.com",
+    "56": "https://bsc-rpc.publicnode.com",
+    "43114": "https://avalanche-c-chain-rpc.publicnode.com"
+  },
+  "npx_command": "npx -y dontaskagain-mcp",
+  "pair_code_ttl_hours": 24
+}

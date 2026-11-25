@@ -1,0 +1,22 @@
+Don't Ask Again — Agent Wallet (Chrome extension)
+Copyright 2026 FOXOKO LABS LTD
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product includes third-party material under its own licenses:
+
+- Manrope font, Copyright 2018 The Manrope Project Authors,
+  SIL Open Font License 1.1 (src/ui/common/fonts/Manrope-OFL.txt).
+- JetBrains Mono font, Copyright 2020 The JetBrains Mono Project Authors,
+  SIL Open Font License 1.1 (src/ui/common/fonts/JetBrainsMono-OFL.txt).
+- Network and token logos in public/logos (TRON, Ethereum, Arbitrum, Optimism,
+  Polygon, Base, USDC, USDT) are trademarks of their respective owners and are
+  used only to identify those networks and assets. They are not covered by the
+  Apache License.
+
+"Don't Ask Again", its logo and mascot (public/brand, public/mascot, public/icons)
+are trademarks of FOXOKO LABS LTD. The Apache License does not grant permission
+to use them except as required for reasonable and customary use in describing
+the origin of the work.
+
+npm dependencies are listed in package.json and keep their own licenses.

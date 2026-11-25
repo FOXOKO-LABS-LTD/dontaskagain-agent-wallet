@@ -1,0 +1,4 @@
+@font-face{font-family:"Manrope";src:url("./fonts/Manrope-latin.woff2") format("woff2");font-weight:200 800;font-style:normal;font-display:swap;unicode-range:U+0020-00FF,U+2000-206F,U+20AC,U+2116,U+2190,U+2192,U+2212,U+2264-2265;}
+@font-face{font-family:"Manrope";src:url("./fonts/Manrope-cyrillic.woff2") format("woff2");font-weight:200 800;font-style:normal;font-display:swap;unicode-range:U+0400-052F,U+2DE0-2DFF,U+A640-A69F;}
+@font-face{font-family:"JetBrainsMono";src:url("./fonts/JetBrainsMono-latin.woff2") format("woff2");font-weight:200 800;font-style:normal;font-display:swap;unicode-range:U+0020-00FF,U+2000-206F,U+20AC,U+2116,U+2190,U+2192,U+2212,U+2264-2265;}
+@font-face{font-family:"JetBrainsMono";src:url("./fonts/JetBrainsMono-cyrillic.woff2") format("woff2");font-weight:200 800;font-style:normal;font-display:swap;unicode-range:U+0400-052F,U+2DE0-2DFF,U+A640-A69F;}

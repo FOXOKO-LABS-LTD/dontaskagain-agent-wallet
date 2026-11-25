@@ -1,0 +1,46 @@
+{
+  "name": "dontaskagain-agent-wallet",
+  "version": "0.3.10",
+  "private": true,
+  "type": "module",
+  "description": "Don't Ask Again — Chrome extension (MV3): the human's wallet for AI agents. Agents ask, the human signs every transaction; keys never leave the browser.",
+  "license": "Apache-2.0",
+  "homepage": "https://dontaskagain.xyz",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/foxokolabs/dontaskagain-agent-wallet.git"
+  },
+  "bugs": {
+    "url": "https://github.com/foxokolabs/dontaskagain-agent-wallet/issues"
+  },
+  "scripts": {
+    "build": "tsc --noEmit -p tsconfig.json && vite build && node scripts/check-dist.mjs",
+    "dev": "vite build --watch",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
+    "@scure/base": "^2.4.0",
+    "@scure/bip32": "^2.4.0",
+    "@scure/bip39": "^2.4.0",
+    "qrcode-generator": "^2.0.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "viem": "^2.58.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.3.7",
+    "@types/node": "^26.6.6",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@types/ws": "^8.18.2",
+    "@vitejs/plugin-react": "^6.3.0",
+    "tronweb": "^6.5.1",
+    "typescript": "5.9",
+    "vite": "^8.3.8",
+    "vitest": "^4.1.12",
+    "ws": "^8.23.0"
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "appName": { "message": "Don't Ask Again", "description": "Product name — not translated" },
+  "appDesc": { "message": "A human's wallet for AI agents: agents ask, the human signs. TRON and EVM networks, USDC bridge (CCTP), gas from Ethereum." }
+}

@@ -1,0 +1,9 @@
+{
+  "comment": "The x402 gateway: the only seller the extension pays for TRON resources without a second window. payTo must be in this built-in list.",
+  "resource_payments": [
+    {"network":"eip155:8453","asset":"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913","eip3009":{"name":"USD Coin","version":"2"},
+     "pay_to":["0x16dDE7b0A9b092c4Dd985af5D9Ca04e389b3c87E"]}
+  ],
+  "products": {"proxy":["tron/send"],"direct":["tron/activate","tron/energy","tron/bandwidth"]},
+  "max_timeout_seconds_cap": 600
+}

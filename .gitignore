@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.log
+.env*
+
+# preview screenshots (scripts/preview/shots*.sh)
+docs/screens*/
+dist-public/

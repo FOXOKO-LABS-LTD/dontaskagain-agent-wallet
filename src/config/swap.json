@@ -1,0 +1,27 @@
+{
+  "_comment": "Swap TRX <-> USDT in TRON through sun.io Universal Router. Contracts checked on chain 2026-11-18.",
+  "mainnet": {
+    "chain_id": 728126428,
+    "router": "TQqgNg13s2DjvXhW1ky4v6TsR8wZGvb7Y4",
+    "permit2": "TTJxU3P8rHycAyFY4kVtGNfmnMH4ezcuM9",
+    "wtrx": "TNUC9Qb1rRpS5CbWLmNMxXBjyFoydXjWFR",
+    "trx": "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb",
+    "assets": { "TRX": { "address": "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb", "decimals": 6, "native": true },
+                "USDT": { "address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", "decimals": 6 } }
+  },
+  "nile": {
+    "chain_id": 3448148188,
+    "router": "TEgq4237arNE7jX74KCDkc1MXdZeWNkGVj",
+    "permit2": "TYQuuhGbEMxF7nZxUHV3uHJxAVVAegNU9h",
+    "wtrx": "TYsbWxNnyTgsZaTFaue9hqpxkU3Fkco94a",
+    "trx": "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb",
+    "assets": { "TRX": { "address": "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb", "decimals": 6, "native": true },
+                "USDT": { "address": "TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf", "decimals": 6 } }
+  },
+  "limits": { "max_slippage_bps": 300, "default_slippage_bps": 50, "auto_max_slippage_bps": 100, "auto_max_price_deviation_bps": 200,
+              "permit_ttl_sec": 1800, "swap_energy_estimate": 400000 },
+  "_swap_proxy_comment": "true: the x402 gateway counts the sun.io router subsidy (energy_user / energy_origin); false = the swap step buys through Direct only; the Signer setting must match",
+  "swap_proxy_allowed": true,
+  "_receiver_activation": "true: tron/send sends only with the account in a block and refunds the activation share when someone else activated it; false = a new TRX recipient through Direct tron/activate only (the Signer setting must match)",
+  "receiver_activation_proxy_allowed": true
+}

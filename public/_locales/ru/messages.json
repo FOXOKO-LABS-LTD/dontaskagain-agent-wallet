@@ -1,0 +1,4 @@
+{
+  "appName": { "message": "Don't Ask Again", "description": "Product name — not translated" },
+  "appDesc": { "message": "Кошелёк человека для ИИ-агентов: агенты просят — человек подписывает. TRON и EVM-сети, мост USDC (CCTP), газ из Ethereum." }
+}

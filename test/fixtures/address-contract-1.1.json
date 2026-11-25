@@ -1,0 +1,90 @@
+{
+  "version": "1.1.0",
+  "font": "JetBrainsMono",
+  "full_address_required": true,
+  "ellipsis_allowed": false,
+  "change_case": false,
+  "visual_group_size": 4,
+  "prefix_length": {
+    "TRON": 4,
+    "EVM": 6
+  },
+  "suffix_length": 4,
+  "whitespace_inserted_into_address": false,
+  "copy_source": "button.dataset.copy or address.dataset.address, never innerText",
+  "minimum_font_px": 11,
+  "cases": [
+    {
+      "raw": "TGLvvwS4rYspNA9bdtdLEGYKkcR865Jdi1",
+      "groups": [
+        "TGLv",
+        "vwS4",
+        "rYsp",
+        "NA9b",
+        "dtdL",
+        "EGYK",
+        "kcR8",
+        "65",
+        "Jdi1"
+      ],
+      "prefix": "TGLv",
+      "suffix": "Jdi1"
+    },
+    {
+      "raw": "TQ7nPm2xN8uKjP9LrV6yAbCdEfGhJkWf3k",
+      "groups": [
+        "TQ7n",
+        "Pm2x",
+        "N8uK",
+        "jP9L",
+        "rV6y",
+        "AbCd",
+        "EfGh",
+        "Jk",
+        "Wf3k"
+      ],
+      "prefix": "TQ7n",
+      "suffix": "Wf3k"
+    },
+    {
+      "raw": "0x7a42b19E3F6D8c20A1e4B5d67F9032c1E8a6D5B4",
+      "groups": [
+        "0x7a42",
+        "b19E",
+        "3F6D",
+        "8c20",
+        "A1e4",
+        "B5d6",
+        "7F90",
+        "32c1",
+        "E8a6",
+        "D5B4"
+      ],
+      "prefix": "0x7a42",
+      "suffix": "D5B4"
+    },
+    {
+      "raw": "TQ7nPm2xN8uKjP9LaV6yAbCdEfGhJkWf3k",
+      "groups": [
+        "TQ7n",
+        "Pm2x",
+        "N8uK",
+        "jP9L",
+        "aV6y",
+        "AbCd",
+        "EfGh",
+        "Jk",
+        "Wf3k"
+      ],
+      "prefix": "TQ7n",
+      "suffix": "Wf3k"
+    }
+  ],
+  "reject_instead_of_silently_cleaning": [
+    "TQ7nPm2x\u200bN8uKjP9LrV6yAbCdEfGhJkWf3k",
+    " TQ7nPm2xN8uKjP9LrV6yAbCdEfGhJkWf3k",
+    "TQ7nPm2xN8uKjP9LrV6yAbCdEfGhJkWf3k\n",
+    "\u0422Q7nPm2xN8uKjP9LrV6yAbCdEfGhJkWf3k"
+  ],
+  "format_check_is_not_network_or_checksum_validation": true
+}

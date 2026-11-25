@@ -1,0 +1,10 @@
+{
+  "_comment": "dontaskagain-mcp: the exact version. Until npm_published is true the wizard launches the archive from the site (npx -y -p <npx_url> dontaskagain-mcp); the wizard's path/URL field overrides it. When the npm name is published: set npm_published true — the wizard switches to npx -y <npx_package>.",
+  "npx_package": "dontaskagain-mcp@0.1.4",
+  "npx_url": "https://dontaskagain.xyz/dl/dontaskagain-mcp-0.1.4.tgz",
+  "npm_published": false,
+  "npx_bin": "dontaskagain-mcp",
+  "config_dir": "~/.dontaskagain",
+  "codex_startup_timeout_sec": 60,
+  "codex_tool_timeout_sec": 330
+}
