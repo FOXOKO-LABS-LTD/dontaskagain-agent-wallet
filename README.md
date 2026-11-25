@@ -13,7 +13,7 @@ sees the parsed transaction in the extension and signs it, or rejects it.
 - **Keys stay in the browser.** Recovery phrases and private keys are encrypted with the human's password inside the
   extension. The Signer server that relays agent requests holds no keys.
 - **End-to-end encryption.** With the public Signer, agent requests and wallet answers are signed and encrypted
-  end to end ([`dontaskagain-mcp`](https://github.com/foxokolabs/dontaskagain-mcp) on the agent side); the Signer
+  end to end ([`dontaskagain-mcp`](https://github.com/FOXOKO-LABS-LTD/dontaskagain-mcp) on the agent side); the Signer
   operator sees who talks to whom and when, but not amounts, recipients or reasons, and cannot forge a request.
 
 Website: https://dontaskagain.xyz · For agents: [llms.txt](https://dontaskagain.xyz/llms.txt),
@@ -50,7 +50,7 @@ planned.
 ### From source
 
 ```bash
-git clone https://github.com/foxokolabs/dontaskagain-agent-wallet.git
+git clone https://github.com/FOXOKO-LABS-LTD/dontaskagain-agent-wallet.git
 cd dontaskagain-agent-wallet
 npm ci
 npm test

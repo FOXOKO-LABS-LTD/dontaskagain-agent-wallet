@@ -8,10 +8,10 @@
   "homepage": "https://dontaskagain.xyz",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/foxokolabs/dontaskagain-agent-wallet.git"
+    "url": "git+https://github.com/FOXOKO-LABS-LTD/dontaskagain-agent-wallet.git"
   },
   "bugs": {
-    "url": "https://github.com/foxokolabs/dontaskagain-agent-wallet/issues"
+    "url": "https://github.com/FOXOKO-LABS-LTD/dontaskagain-agent-wallet/issues"
   },
   "scripts": {
     "build": "tsc --noEmit -p tsconfig.json && vite build && node scripts/check-dist.mjs",
