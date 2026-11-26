@@ -234,6 +234,26 @@ if (q.get('e2e') === 'public') {
   const op0 = (answers as any).op;
   (answers as any).op = (c: any) => (String(c.request_id).startsWith('chain:') ? chainOpView(chainIn as any) : op0(c));
 }
+// ?cloud=1 (0.3.13): a cloud agent of a chat app (OAuth) — the agents list, its settings, its request in the sign
+// window, its operation page, history; the consent screen #/oauth/<code> (?loop=1 — a loopback redirect)
+if (q.get('cloud') === '1') {
+  (status as any).e2e = { server_mode: 'required', active: true, wanted: true, public_signer_url: 'https://signer.dontaskagain.xyz', public_placeholder: false, oauth: true, wallet_fp: 'K7QD-2MXA-PL4R-9TZE-W3NB-H6FJ' };
+  (status.settings as any).signer_url = 'https://signer.dontaskagain.xyz';
+  status.agents.unshift({ id: 'ag_cloud', name: 'ChatGPT', accounts: ['acc_main'], allowed_types: ['transfer', 'swap', 'bridge', 'refuel'], created_at: iso(now - 3600_000), new_types: [], mcp_name: 'dontaskagain-chatgpt',
+    e2e: { fp: 'Q4ZX-7HKD-PN2W-RM5T-B8CJ-L3VE', mode: 'server', via: 'server', paired_at: iso(now - 3600_000), confirmed: true },
+    cloud: { client_id: 'https://chatgpt.com/oauth/client.json', client_name: 'ChatGPT', redirect_host: 'chatgpt.com', connected_at: iso(now - 3600_000) } } as any);
+  const loop = q.get('loop') === '1';
+  (answers as any).oauthConsentGet = () => ({ id: 'oc_demo01', client: { id: loop ? 'daa_c_7KQ2' : 'https://chatgpt.com/oauth/client.json', name: loop ? 'MCP Inspector' : 'ChatGPT', uri: loop ? undefined : 'https://chatgpt.com', kind: loop ? 'dcr' : 'cimd', verified: false },
+    redirect_uri: loop ? 'http://localhost:6274/oauth/callback' : 'https://chatgpt.com/connector_platform_oauth_redirect', redirect_host: loop ? 'localhost:6274' : 'chatgpt.com', redirect_loopback: loop,
+    scope: 'wallet', expires_at: iso(now + 9 * 60_000) });
+  reqs.unshift({ request_id: 'awr_c1', agent: { id: 'ag_cloud', name: 'ChatGPT', cloud: true } as any, account: { id: 'acc_main', name: 'main' }, type: 'transfer', network: 'tron', intent: { asset: 'USDT', to: BOOK, amount: '40' }, reason: 'Pay the invoice the user pasted in the chat', status: 'pending', created_at: iso(now - 15_000), expires_at: iso(now + 20 * 60_000) } as any);
+  const prep1 = answers.prepare;
+  answers.prepare = (c: any) => (c.request_id === 'awr_c1' ? { ...prepared, key: 'awr_c1', agent: { id: 'ag_cloud', name: 'ChatGPT', known: true, cloud: true }, reason: 'Pay the invoice the user pasted in the chat',
+    e2e: { mode: 'server', fp: 'Q4ZX-7HKD-PN2W-RM5T-B8CJ-L3VE', note: '' } } : prep1(c));
+  const opC = (answers as any).op;
+  (answers as any).op = (c: any) => (c.request_id === 'op_cloud' ? { ...opC({ request_id: 'op_br_done' }), initiator: 'ChatGPT', own: false, cloud: true } : opC(c));
+  history.unshift({ ...(history[0] as any), request_id: 'awr_c0', agent: { id: 'ag_cloud', name: 'ChatGPT', cloud: true }, own: false } as any);
+}
 // ?client=claude|codex|json (0.3.8): the MCP client the connect step prints commands for
 if (q.get('client')) (status.settings as any).mcp_client = q.get('client');
 const prepare0 = answers.prepare;

@@ -1,4 +1,5 @@
 import { OriginPlate, SignedPlates } from './OriginPlate';
+import { CloudBadge, CloudPlate } from './Cloud';
 // Sign window body (with the «signing by habit» protection): the agent's own words on top, large, next to the amount;
 // a plate when the same agent asked the same recipient + asset within 30 min; then the decoded built transaction,
 // recipient checks, resources and their purchase. «Sign» wakes up 1.5 s after the view opens
@@ -60,7 +61,7 @@ function TransferReview({ v, onSign, onReject, busy }: Props) {
     <div>
       <div className="said">
         <div className="who">
-          {v.kind === 'agent' ? <><span className="eyebrow">{t('review.agentEyebrow')}</span><b>{v.agent?.name}</b>{!v.agent?.known && <span className="badge warn">{t('review.notInDoc')}</span>}</>
+          {v.kind === 'agent' ? <><span className="eyebrow">{t('review.agentEyebrow')}</span><b>{v.agent?.name}</b>{v.agent?.cloud && <CloudBadge />}{!v.agent?.known && <span className="badge warn">{t('review.notInDoc')}</span>}</>
             : <><span className="eyebrow blue">{t('review.youEyebrow')}</span><b>{t('review.noAgent')}</b></>}
           <span className="grow" />
           {v.expires_at && <Countdown until={v.expires_at} />}
@@ -141,7 +142,7 @@ function TransferReview({ v, onSign, onReject, busy }: Props) {
         </div>
       )}
 
-      {v.e2e && <OriginPlate e={v.e2e} />}
+      {v.agent?.cloud ? <CloudPlate /> : v.e2e && <OriginPlate e={v.e2e} />}
       {v.warnings.map((w, i) => <div key={i} className="plate warn">{w}</div>)}
       {v.blocked && <div className="plate bad">{t('review.blocked')} {v.blocked.text ?? v.blocked.message} <span className="small">({v.blocked.code})</span></div>}
       <NextSteps v={v} />

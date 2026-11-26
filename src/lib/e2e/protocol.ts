@@ -187,7 +187,7 @@ export interface E2EDoc {
   e2e: { wallet_key: string; fp: string };
   accounts: { id: string; addresses: Account['addresses']; ton_pubkey?: string }[];
   networks_trusted: string[];
-  agents: Record<string, { accounts: string[]; key: { bundle: string; fp: string; mode: 'agent' | 'server'; paired_at: string } | null }>;
+  agents: Record<string, { accounts: string[]; key: { bundle: string; fp: string; mode: 'agent' | 'server'; paired_at: string } | null; cloud?: { client_id: string; consent_id: string } }>;
   views: Record<string, string>;
 }
 
@@ -210,7 +210,8 @@ export function buildE2EDoc(walletId: string, version: number, accounts: Account
   const agents: E2EDoc['agents'] = {};
   for (const [id, a] of Object.entries(v.agents)) {
     if (a.revoked_at) continue;
-    agents[id] = { accounts: a.accounts, key: a.e2e ? { bundle: a.e2e.bundle, fp: a.e2e.fp, mode: a.e2e.mode, paired_at: a.e2e.paired_at } : null };
+    agents[id] = { accounts: a.accounts, key: a.e2e ? { bundle: a.e2e.bundle, fp: a.e2e.fp, mode: a.e2e.mode, paired_at: a.e2e.paired_at } : null,
+      ...(a.cloud ? { cloud: { client_id: a.cloud.client_id, consent_id: a.cloud.consent_id } } : {}) };
   }
   return {
     schema_version: '1', mode: 'e2e', wallet_id: walletId, version, updated_at: ts(now), ...(service ? { service } : {}),

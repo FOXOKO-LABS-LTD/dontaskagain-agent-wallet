@@ -3,6 +3,26 @@
 All notable changes to the Don't Ask Again Chrome extension. Versions before the first public release were
 distributed as early-access zip archives.
 
+## 0.3.14 — 2026-11-26
+- **A fixed extension id.** The manifest carries the extension's public key (`key`), so the zip, a build from source
+  and the future Chrome Web Store item all have the same id: `lfjhjcdnafhiageojbcodejdhlohelea`. The Signer's sign-in
+  page for chat apps opens the consent window of exactly this extension.
+- Upgrading from 0.3.13 or older: Chrome treats 0.3.14 as a new extension with its own empty storage. Before removing
+  the old one, make sure you have every recovery phrase (and imported key) written down; import them in 0.3.14, connect
+  to the Signer again and reconnect your agents.
+
+## 0.3.13 — 2026-11-26
+- **Connect a chat app.** Claude, ChatGPT or any MCP client with a remote server can connect to the wallet with an
+  OAuth sign-in on the Signer. The sign-in page shows a one-time code; the extension opens its consent window by itself
+  when the page is a page of your own Signer (or you type the code in Agents → «Connect a chat app»). The window reads
+  who asks from the Signer: the app's name (marked «not verified»), the exact address the sign-in returns to (a warning
+  for addresses on this computer), the access asked for. You pick the accounts and the operation types and name the
+  agent; «Allow» and «Deny» are signed by your wallet.
+- **Cloud agents.** The agent of a chat app cannot keep a key: the Signer holds its key and sees its requests. Such an
+  agent is marked «cloud» everywhere it appears — the agents list, its settings, the sign window, the operation page
+  and history. It has no token or commands; revoking it ends the chat app's access. Every transaction is still signed
+  by you in the window that shows it.
+
 ## 0.3.12 — 2026-11-25
 - **History of an account in E2E.** Your own operations (transfers, swaps, bridges, refuels, resources) come from the
   wallet's encrypted local history with their steps and transactions — kept up to 90 days (at most 300 finished

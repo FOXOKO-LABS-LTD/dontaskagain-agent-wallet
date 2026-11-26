@@ -22,6 +22,8 @@ import { reconcileE2E, e2eUnlocked, unpinE2E, confirmFp, drainInbox, drainOutbox
 import e2eCfg from '../config/e2e.json';
 import { registeringView, registrationView, answerNewTypes, connectAgentE2E, connect, createAgent, disconnect, EXT_VERSION, loadSession, onHello, refreshAgents, revokeAgent, rotateAgent, sendState, setAgentAccounts, bindAccountToAgents, setHandlers, socket, syncDoc, updateAgent } from './signer';
 import { LEGACY_MCP_NAME } from '../lib/agentConnect';
+import { acceptExternal } from '../lib/oauth';
+import { consentDecide, consentGet, signerOrigin } from './oauth';
 import { getPublic, getSession, getVaultBlob, patchSession, setPublic } from './store';
 import {
   addHdAccount, addSeed, autolockAt, autolockCheck, createFromKey, createFromMnemonic, hideAccount, importKeyAccount, isUnlocked, lock, MAX_AUTOLOCK, MIN_AUTOLOCK,
@@ -125,6 +127,7 @@ async function status(): Promise<StatusView> {
       new_types: a.revoked_at ? [] : newTypesOf(a), mcp_name: a.mcp_name ?? LEGACY_MCP_NAME,
       e2e: a.e2e ? { fp: a.e2e.fp, mode: a.e2e.mode, via: a.e2e.via, paired_at: a.e2e.paired_at, confirmed: a.e2e.confirmed } : null,
       pairing: a.pairing ? { expires_at: a.pairing.expires_at, manual: !!a.pairing.manual_fp } : null,
+      cloud: a.cloud ? { client_id: a.cloud.client_id, client_name: a.cloud.client_name, redirect_host: a.cloud.redirect_host, connected_at: a.cloud.connected_at } : null,
     })) : [],
     doc_version: pub?.doc_version ?? 0,
     extension_id: chrome.runtime.id,
@@ -259,6 +262,8 @@ async function handle(c: Cmd): Promise<unknown> {
       return opView(c.request_id);
     }
     case 'openOp': await openOpWindow(c.request_id); return null;
+    case 'oauthConsentGet': return consentGet(c.user_code);
+    case 'oauthConsentDecide': { const r = await consentDecide(c.consent_id, c.decision, c.accounts, c.allowed_types, c.name); notifyPages(); return r; }
     case 'chainStatus': { const x = await chainCached(c.account_id); return { at: x?.at ?? null, errors: x?.errors ?? [], loading: !x }; }
     case 'agentNewTypes': await answerNewTypes(c.id, c.allow); notifyPages(); return null;
     case 'agentSetAccounts': await setAgentAccounts(c.id, c.accounts); notifyPages(); return null;
@@ -368,6 +373,27 @@ async function syncDocIfBehind() {
   const s = await getSession();
   if ((s.signerSeenDocVersion ?? 0) < (pub?.doc_version ?? 0) || !pub?.doc_version) await syncDoc().catch(() => {});
 }
+
+/**
+ * 0.3.13: the Signer's authorize page hands over the consent code (externally_connectable). Accepted only from a page
+ * of the wallet's own Signer; the window then reads the consent from the Signer itself — nothing of the page is shown.
+ * One window at a time (a page cannot spam windows).
+ */
+let oauthWindowAt = 0;
+async function openOAuthWindow(code: string): Promise<void> {
+  if (Date.now() - oauthWindowAt < 3_000) return;
+  oauthWindowAt = Date.now();
+  await chrome.windows.create({ url: chrome.runtime.getURL(`popup.html?w=oauth#/oauth/${encodeURIComponent(code)}`), type: 'popup', width: 400, height: 680, focused: true });
+}
+chrome.runtime.onMessageExternal?.addListener((msg: unknown, sender, reply: (r: unknown) => void) => {
+  void signerOrigin().then(async (origin) => {
+    const ok = acceptExternal(msg, sender.origin, origin);
+    if (!ok) { try { reply({ ok: false }); } catch { /* gone */ } return; }
+    try { reply({ ok: true }); } catch { /* the page went away */ }
+    await openOAuthWindow(ok.user_code);
+  }).catch((e) => console.warn('[agent-wallet] external', (e as Error)?.message ?? e));
+  return true;
+});
 
 chrome.runtime.onMessage.addListener((msg: Cmd, sender, reply: (r: Reply) => void) => {
   if (sender.id !== chrome.runtime.id || !msg || typeof (msg as any).cmd !== 'string') return false;

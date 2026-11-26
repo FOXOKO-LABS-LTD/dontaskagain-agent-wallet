@@ -10,6 +10,7 @@ import { Copy, Err, api, fmtTime, useWorkerChanged } from '../common/ui';
 import type { ScreenProps } from './screen';
 import { t } from '../../i18n';
 import { Mascot, type MascotState } from '../common/Mascot';
+import { CloudPlate } from '../common/Cloud';
 
 const stateWord = (s: OpStep['state']) => t(`opPage.state.${s}`);
 /** The mascot of the page (shell only, the status itself is said in words in the plate under it). */
@@ -45,6 +46,7 @@ export function Operation({ st, nav, path, onClose }: Pick<ScreenProps, 'st' | '
           <h2 style={{ margin: 0 }}>{v.title}</h2></div>
         {v.subtitle && <div className="small muted">{v.subtitle}</div>}
         {v.reason && <div className="small" style={{ marginTop: 4 }}>{t('opPage.agentWords', { reason: v.reason })}</div>}
+        {v.cloud && <div style={{ marginTop: 8 }}><CloudPlate /></div>}
         <div className={`plate ${toneCls}`} style={{ fontSize: 16, fontWeight: 800, marginTop: 10 }}>{v.status_label}</div>
         <div className="small muted">
           {v.created_at ? t('opPage.started', { t: fmtTime(v.created_at) }) : ''}

@@ -10,6 +10,7 @@ import { TYPE_INFO, type RequestType } from '../../lib/wallet/model';
 import { HistoryList } from './Home';
 import { t } from '../../i18n';
 import { Mascot } from '../common/Mascot';
+import { CloudBadge, CloudPlate as CloudPlateInline } from '../common/Cloud';
 import type { ScreenProps } from './screen';
 
 export function AgentsTab({ st, nav }: ScreenProps) {
@@ -45,12 +46,13 @@ export function AgentsTab({ st, nav }: ScreenProps) {
         {rows.map((r) => (
           <div key={r.request_id} className="list-item click" onClick={() => nav(`/sign/${r.request_id}`)}>
             <div className="req"><span className="what">{requestAmount(r)}</span><Countdown until={r.expires_at} />
-              <span className="small muted">{r.agent?.name ?? t('agents.agent')} · {r.account?.name}{r.type === 'swap' ? ` · ${requestTarget(r)}` : ''}</span><span className="link small">{t('agents.openReq')}</span></div>
+              <span className="small muted">{r.agent?.name ?? t('agents.agent')}{r.agent?.cloud && <> <CloudBadge /></>} · {r.account?.name}{r.type === 'swap' ? ` · ${requestTarget(r)}` : ''}</span><span className="link small">{t('agents.openReq')}</span></div>
           </div>
         ))}
       </div>
 
       <div className="row between"><h3>{t('agents.agents')} · {live.length}</h3><button className="btn sm primary" onClick={() => nav('/agents/new')}><I.plus size={13} /> {t('title.agentNew')}</button></div>
+      {st.e2e?.oauth && <div className="row" style={{ justifyContent: 'flex-end', marginTop: 4 }}><button className="btn sm" onClick={() => nav('/oauth')}><I.plus size={13} /> {t('oauth.connect')}</button></div>}
       {!live.length && <div className="list"><div className="empty"><Mascot state="empty" size={64} />{t('agents.none')}</div></div>}
       {live.map((a) => <AgentCard key={a.id} a={a} st={st} srv={server[a.id]} nav={nav} />)}
 
@@ -90,8 +92,10 @@ function AgentCard({ a, st, srv, nav }: { a: AgentView; st: StatusView; srv?: an
   const accName = (id: string) => st.accounts.find((x) => x.id === id)?.name ?? id;
   return (
     <div className="card">
-      <div className="row between"><h2 style={{ margin: 0 }}>{a.name}</h2><span className="small mono subtle">{a.token_prefix ?? srv?.token_prefix ?? ''}…</span></div>
-      <div className="small muted" style={{ marginTop: 2 }}>{a.created_at ? t('agents.since', { at: fmtTime(a.created_at) }) : ''}{srv?.last_used_at ? ` · ${t('agents.lastSeen', { at: fmtTime(srv.last_used_at) })}` : ` · ${t('agents.neverUsed')}`} · MCP <span className="mono">{a.mcp_name}</span></div>
+      <div className="row between"><h2 style={{ margin: 0 }}>{a.name}{a.cloud && <> <CloudBadge /></>}</h2>{!a.cloud && <span className="small mono subtle">{a.token_prefix ?? srv?.token_prefix ?? ''}…</span>}</div>
+      <div className="small muted" style={{ marginTop: 2 }}>{a.created_at ? t('agents.since', { at: fmtTime(a.created_at) }) : ''}{srv?.last_used_at ? ` · ${t('agents.lastSeen', { at: fmtTime(srv.last_used_at) })}` : ` · ${t('agents.neverUsed')}`}{a.cloud ? '' : <> · MCP <span className="mono">{a.mcp_name}</span></>}</div>
+      {a.cloud && <div className="small" style={{ marginTop: 4 }}>{t('cloud.from', { name: a.cloud.client_name, host: a.cloud.redirect_host })}</div>}
+      {a.cloud && <div style={{ marginTop: 6 }}><CloudPlateInline /></div>}
       <div className="chips" style={{ marginTop: 8 }}>{a.accounts.map((id, i) => <span key={id} className={`badge ${i === 0 ? 'pop' : ''}`}>{accName(id)}{i === 0 ? ` · ${t('agents.default')}` : ''}</span>)}</div>
       <div className="small" style={{ marginTop: 6 }}><b>{t('agents.allowed')}</b> <span className="muted">{a.allowed_types.length ? a.allowed_types.map(typeName).join(', ') : t('agents.nothing')}</span></div>
       <div className="small subtle" style={{ marginTop: 6 }}>{t('agents.humanOnly')}</div>

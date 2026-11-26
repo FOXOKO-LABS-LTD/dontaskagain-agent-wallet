@@ -240,11 +240,13 @@ export const NO_EXPIRY_TTL_MS = 86_400_000;
 const expiryOf = (e: Entry) => (e.request.expires_at ? Date.parse(e.request.expires_at) : e.received_at + NO_EXPIRY_TTL_MS);
 const isLive = (e: Entry) => e.request.status === 'pending' && !e.local && e.request.type !== 'bridge_step' && expiryOf(e) > Date.now();
 /** 0.3.3: an agent's name is the vault's (the Signer's name is never shown); unknown → none. */
-const agentOf = (vault: any, a: any): { id: string; name: string; known?: boolean } | undefined => {
+const agentOf = (vault: any, a: any): { id: string; name: string; known?: boolean; cloud?: boolean } | undefined => {
   if (!a || typeof a.id !== 'string') return undefined;
   const mine = vault && Object.prototype.hasOwnProperty.call(vault.agents, a.id) ? vault.agents[a.id] : undefined;
-  return { id: a.id, name: mine?.name ?? '', known: !!mine };
+  return { id: a.id, name: mine?.name ?? '', known: !!mine, ...(mine?.cloud ? { cloud: true } : {}) };
 };
+/** 0.3.13: the agent is a cloud agent of a chat app (from the vault only — never from what the Signer says). */
+const isCloud = (vault: any, id: unknown): boolean => !!(vault && typeof id === 'string' && Object.prototype.hasOwnProperty.call(vault.agents, id) && vault.agents[id].cloud);
 
 export async function pendingRows(): Promise<RequestRow[]> {
   const s = await getSession();
@@ -254,6 +256,7 @@ export async function pendingRows(): Promise<RequestRow[]> {
     intent: e.request.intent, reason: e.request.reason, status: e.request.status, expires_at: e.request.expires_at ?? new Date(expiryOf(e)).toISOString(), created_at: e.request.created_at, local: e.local,
     swap: undefined, // the Signer's amount_out_min of a pending swap is not shown (the window shows our own build)
     e2e_mode: e.request.e2e?.key_mode,
+    ...(isCloud(vault, e.request.agent?.id) ? { cloud: true } : {}),
   }));
 }
 
@@ -415,6 +418,7 @@ async function decorate(id: string, v: PreparedView): Promise<PreparedView> {
   // the origin plate comes only from the E2E store (a request the Signer sent has no `e2e` mark by now)
   const mark = originMark((await e2eRequest(id)) ?? { ...((await getSession()).requests?.[id]?.request ?? {}), e2e: undefined }, await e2eDirectReads());
   if (mark) v.e2e = mark;
+  if (v.agent && isCloud((await getSession()).unlocked?.vault, v.agent.id)) v.agent = { ...v.agent, cloud: true };
   if (v.blocked) blockedViews.set(id, v.blocked); else blockedViews.delete(id);
   v.repeat = await repeatOf(id);
   v.live_signature = await liveSignatureOf(id, await requestOf(id));
@@ -512,7 +516,9 @@ export async function opView(id: string): Promise<OpView> {
     } catch (err) { console.warn('[agent-wallet] op:', (err as Error)?.message ?? err); }
   }
   if (!e) throw new Error('NOT_FOUND');
-  return buildOp(e.request);
+  const op = buildOp(e.request);
+  if (isCloud((await getSession()).unlocked?.vault, e.request.agent?.id)) op.cloud = true;
+  return op;
 }
 /** A final multi-step request stored before 0.2.1 has no steps yet: fetch it once. */
 const needsDetail = (r: any) => (r.type === 'bridge' && !r.bridge) || (r.type === 'refuel' && !r.refuel) || (r.type === 'swap' && !r.swap?.steps);

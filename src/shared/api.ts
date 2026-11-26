@@ -76,7 +76,10 @@ export type Cmd =
   | { cmd: 'agentConnectE2E'; id: string; launch: 'npx' | 'remote' }
   | { cmd: 'agentManualFp'; id: string; fp: string }
   | { cmd: 'agentConfirmFp'; id: string; ok: boolean }
-  | { cmd: 'signerMode'; mode: 'own' | 'public'; own_url?: string };
+  | { cmd: 'signerMode'; mode: 'own' | 'public'; own_url?: string }
+  // 0.3.13: «Connect a chat app» (OAuth on the Signer, a cloud agent)
+  | { cmd: 'oauthConsentGet'; user_code: string }
+  | { cmd: 'oauthConsentDecide'; consent_id: string; decision: 'approve' | 'deny'; accounts: string[]; allowed_types: string[]; name?: string };
 
 /** A change of an agent from «Agent settings» — everything goes through the wallet document. */
 export interface AgentPatch { name?: string; accounts?: string[]; allowed_types?: string[] }
@@ -96,7 +99,7 @@ export interface PricesView { TRX: number | null; coins?: Record<string, PriceIn
 
 /** A decided (or own) request for the history lists. */
 export interface HistoryRow {
-  request_id: string; agent?: { id: string; name: string }; account?: { id: string; name: string };
+  request_id: string; agent?: { id: string; name: string; cloud?: boolean }; account?: { id: string; name: string };
   type: string; network: string; intent: any; status: string; at: number; own: boolean;
   by: 'human' | 'pause' | 'extension' | 'server'; message?: string;
   swap?: { amount_out_min?: string } | null;
@@ -124,6 +127,8 @@ export interface E2EView {
   wallet_fp?: string;
   wallet_key?: string;
   public_signer_url: string; public_placeholder: boolean;
+  /** 0.3.13: the Signer offers OAuth for chat apps (hello.e2e.oauth) */
+  oauth?: boolean;
 }
 
 /** A phrase as pages see it: name and counts only — the words never leave the worker (no «show phrase»). */
@@ -146,6 +151,8 @@ export interface AgentView {
   /** 0.3.0: the agent's E2E key (fingerprint, who holds it) and a live pairing */
   e2e?: { fp: string; mode: 'agent' | 'server'; via: string; paired_at: string; confirmed?: boolean } | null;
   pairing?: { expires_at: string; manual?: boolean } | null;
+  /** 0.3.13: a cloud agent of a chat app (OAuth): the Signer holds its key and sees its requests */
+  cloud?: { client_id: string; client_name: string; redirect_host: string; connected_at: string } | null;
 }
 
 export interface StatusView {
@@ -182,7 +189,7 @@ export interface BalancesView {
 export interface PreparedView {
   key: string;                               // request_id or own_id
   kind: 'agent' | 'own';
-  agent?: { id: string; name: string; known: boolean };
+  agent?: { id: string; name: string; known: boolean; /** 0.3.13: a cloud agent (the Signer sees its requests) */ cloud?: boolean };
   account: { id: string; name: string; tron?: string; evm?: string };
   network: string; type: string; reason?: string; expires_at?: string; created_at?: string;
   /** 0.3.0: how the request reached the wallet — signed by the agent's own key, by the server's key of a
@@ -228,6 +235,8 @@ export interface PreparedView {
 export interface RequestRow {
   request_id: string; agent?: { id: string; name: string   /** 0.3.0: agent (own key) | server (remote MCP) | undefined (old way / own) */
   e2e_mode?: 'agent' | 'server';
+  /** 0.3.13: a cloud agent of a chat app */
+  cloud?: boolean;
 }; account?: { id: string; name: string; address?: string };
   type: string; network: string; intent: any; reason?: string; status: string; expires_at?: string; created_at?: string;
   local?: { state: 'signed' | 'rejected' | 'error'; message?: string };

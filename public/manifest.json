@@ -1,10 +1,11 @@
 {
   "manifest_version": 3,
   "name": "__MSG_appName__",
-  "version": "0.3.12",
+  "version": "0.3.14",
   "description": "__MSG_appDesc__",
   "default_locale": "en",
   "minimum_chrome_version": "116",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0pvOC7RPBRDQ/RGixZEO2C+IXBjuikNzvrF2HUkzfOk+a2uZyoFvgZ6tnvbEgS/+2kFDwt+svypMtz9Bl+MK+keKNZLDGAq1DRJ4AqKuLUbNMu1hkfeRoqRVHAiuX1AVdJOC2CZUtRgMnK9B/c/1r0oXzmgHwWOyHYMCHOZWL9jvFp0ymhd32GPN8Z8gJLu5htXjkUKwNP6yW46XB6QfDkmQABbrAg/ztbf7/gK04JT2xfP2Ur8dN5U17UhSkKeTRamz0izqq49OCB1J7DF0pIzYyHRpD4SsnufvZogm+5JnPHsbdRN5fXJaMixZsG24NtARDeKo1AqoRvhC27NSJwIDAQAB",
   "background": {
     "service_worker": "background.js",
     "type": "module"
@@ -48,6 +49,11 @@
     "http://*/*",
     "https://*/*"
   ],
+  "externally_connectable": {
+    "matches": [
+      "https://signer.dontaskagain.xyz/*"
+    ]
+  },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; base-uri 'none'; frame-ancestors 'none'; img-src 'self' data:"
   }

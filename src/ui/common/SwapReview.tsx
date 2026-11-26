@@ -1,4 +1,5 @@
 import { OriginPlate, SignedPlates } from './OriginPlate';
+import { CloudBadge, CloudPlate } from './Cloud';
 // Sign window of a swap: you give / you get at least / rate and deviation from the market / pool route with
 // fees / slippage / recipient (own address) / approve of exactly the amount / resources of both transactions and price.
 // One «Sign» signs the Permit2 permit and both transactions. Used by the swap panel and by the sign window
@@ -117,7 +118,7 @@ export function SwapReview({ v, onSign, onReject, busy }: { v: PreparedView; onS
     <div>
       <div className="said">
         <div className="who">
-          {v.kind === 'agent' ? <><span className="eyebrow">{t('review.agentEyebrow')}</span><b>{v.agent?.name}</b>{!v.agent?.known && <span className="badge warn">{t('review.notInDoc')}</span>}</>
+          {v.kind === 'agent' ? <><span className="eyebrow">{t('review.agentEyebrow')}</span><b>{v.agent?.name}</b>{v.agent?.cloud && <CloudBadge />}{!v.agent?.known && <span className="badge warn">{t('review.notInDoc')}</span>}</>
             : <><span className="eyebrow blue">{t('review.youEyebrow')}</span><b>{t('review.noAgent')}</b></>}
           <span className="grow" />
           {v.expires_at && <Countdown until={v.expires_at} />}
@@ -131,7 +132,7 @@ export function SwapReview({ v, onSign, onReject, busy }: { v: PreparedView; onS
       {v.repeat && <div className="plate repeat">{repeatText({ ...v.repeat, kind: 'swap' })}{t('review.repeatCheck')}</div>}
       <div className="card flat"><div className="kv"><span className="k">{t('review.account')}</span><span><b>{v.account.name}</b></span><span className="k">{t('review.network')}</span><span>TRON</span><span className="k">{t('review.type')}</span><span>{t('review.type.swap')}</span></div></div>
       {s && <SwapBlock s={s} accountName={v.account.name} />}
-      {v.e2e && <OriginPlate e={v.e2e} />}
+      {v.agent?.cloud ? <CloudPlate /> : v.e2e && <OriginPlate e={v.e2e} />}
       {v.warnings.map((w, i) => <div key={i} className="plate warn">{w}</div>)}
       {v.blocked && <div className="plate bad">{t('review.blocked')} {v.blocked.text ?? v.blocked.message} <span className="small">({v.blocked.code})</span></div>}
       <NextSteps v={v} />

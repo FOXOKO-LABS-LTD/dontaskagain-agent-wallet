@@ -1,5 +1,6 @@
 // The request queue + one request under review. Used by the sign window, and in the side panel / popup (
 // with the panel open, agent requests are shown in it instead of a separate window).
+import { CloudBadge } from './Cloud';
 import { useCallback, useEffect, useState } from 'react';
 import type { PreparedView, RequestRow, StatusView } from '../../shared/api';
 import { requestAmount, requestTarget } from '../../lib/requestLabel';
@@ -63,7 +64,7 @@ export function SignQueue({ st, reload, initial, onClose, mascots, onSigned, ope
           {rows.map((r) => (
             <div key={r.request_id} className={`list-item click queue-item ${r.request_id === cur ? 'cur' : ''}`} onClick={() => setCur(r.request_id)}>
               <div className="req"><span className="what">{requestAmount(r)}</span><Countdown until={r.expires_at} />
-                <span className="small muted">{r.agent?.name ?? t('sign.agent')} · {r.account?.name}{r.type === 'swap' ? ` · ${requestTarget(r)}` : ''}</span></div>
+                <span className="small muted">{r.agent?.name ?? t('sign.agent')}{r.agent?.cloud && <> <CloudBadge /></>} · {r.account?.name}{r.type === 'swap' ? ` · ${requestTarget(r)}` : ''}</span></div>
             </div>
           ))}
         </div>

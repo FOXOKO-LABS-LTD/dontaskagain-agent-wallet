@@ -17,6 +17,7 @@ import networksCfg from '../../config/networks.json';
 import { AgentsTab } from './Agents';
 import { TYPE_INFO, type RequestType } from '../../lib/wallet/model';
 import type { ScreenProps } from './screen';
+import { CloudBadge } from '../common/Cloud';
 import { t, tk, type Key } from '../../i18n';
 
 type Tab = 'assets' | 'history' | 'agents';
@@ -123,7 +124,7 @@ export function HistoryList({ rows, showAccount }: { rows: HistoryRow[]; showAcc
             </div>
             {h.progress && <div className="small" style={{ marginTop: 2, fontWeight: 700, color: 'var(--info)' }}>{h.progress}</div>}
             <div className="row between small muted" style={{ marginTop: 2 }}>
-              <span>{h.own ? t('hist.you') : h.agent?.name ?? t('hist.agent')} {requestTarget(h)}{showAccount && h.account ? ` · ${h.account.name}` : ''}</span>
+              <span>{h.own ? t('hist.you') : h.agent?.name ?? t('hist.agent')}{!h.own && h.agent?.cloud && <> <CloudBadge /></>} {requestTarget(h)}{showAccount && h.account ? ` · ${h.account.name}` : ''}</span>
               <span>{h.status !== 'unknown' && <span className="badge" style={{ marginRight: 4 }}>{BY[h.by]}</span>}{fmtTime(new Date(h.at).toISOString())}</span>
             </div>
           </div>

@@ -19,7 +19,7 @@ import { BrandLogo, Mascot } from '../common/Mascot';
 type Extra = { pick: (id: string) => void; path: string };
 const loaders = {
   send: () => import('./Send'), receive: () => import('./Receive'), swap: () => import('./SwapPanel'), resources: () => import('./Resources'),
-  bridge: () => import('./Bridge'), refuel: () => import('./Refuel'), settings: () => import('./Settings'), wizard: () => import('./AgentWizard'), agentSettings: () => import('./AgentSettings'), op: () => import('./Operation'), accounts: () => import('./Accounts'), sign: () => import('../common/SignQueue'),
+  bridge: () => import('./Bridge'), refuel: () => import('./Refuel'), settings: () => import('./Settings'), wizard: () => import('./AgentWizard'), agentSettings: () => import('./AgentSettings'), op: () => import('./Operation'), oauth: () => import('./OAuthConsent'), accounts: () => import('./Accounts'), sign: () => import('../common/SignQueue'),
 };
 const L = <K extends keyof typeof loaders>(k: K, name: string) =>
   lazy(() => loaders[k]().then((m: any) => ({ default: m[name] as ComponentType<ScreenProps & Extra> })));
@@ -28,6 +28,7 @@ const Bridge = L('bridge', 'Bridge'), Refuel = L('refuel', 'Refuel');
 const Settings = L('settings', 'Settings'), Book = L('settings', 'Book'), AgentWizard = L('wizard', 'AgentWizard');
 const AgentSettings = L('agentSettings', 'AgentSettings');
 const Operation = L('op', 'Operation');
+const OAuthConsent = L('oauth', 'OAuthConsent');
 const AccountsScreen = L('accounts', 'AccountsScreen'), AddAccount = L('accounts', 'AddAccount'), Seeds = L('accounts', 'Seeds');
 const SignQueue = lazy(() => loaders.sign().then((m) => ({ default: m.SignQueue })));
 function usePreload() {
@@ -41,7 +42,7 @@ function usePreload() {
 
 const TITLES: Record<string, [Key, string]> = {
   '/send': ['title.send', '/'], '/receive': ['title.receive', '/'], '/swap': ['title.swap', '/'], '/resources': ['title.resources', '/'], '/bridge': ['title.bridge', '/'], '/refuel': ['title.refuel', '/'],
-  '/settings': ['title.settings', '/'], '/book': ['title.book', '/settings'], '/agents/new': ['title.agentNew', '/agents'], '/agent': ['title.agent', '/agents'], '/op': ['title.op', '/history'], '/sign': ['title.sign', '/agents'],
+  '/settings': ['title.settings', '/'], '/book': ['title.book', '/settings'], '/agents/new': ['title.agentNew', '/agents'], '/agent': ['title.agent', '/agents'], '/op': ['title.op', '/history'], '/sign': ['title.sign', '/agents'], '/oauth': ['title.oauth', '/agents'],
   '/accounts': ['title.accounts', '/'], '/accounts/add': ['title.accountAdd', '/accounts'], '/seeds': ['title.seeds', '/accounts'],
 };
 
@@ -99,7 +100,7 @@ function App() {
     '/send': Send, '/receive': Receive, '/bridge': Bridge, '/refuel': Refuel, '/swap': SwapPanel, '/resources': Resources, '/settings': Settings, '/book': Book, '/agents/new': AgentWizard,
     '/accounts': AccountsScreen, '/accounts/add': AddAccount, '/seeds': Seeds,
   };
-  const S = screens[path] ?? (path.startsWith('/accounts/add/') ? AddAccount : path.startsWith('/refuel/') ? Refuel : path.startsWith('/agent/') ? AgentSettings : path.startsWith('/op/') ? Operation : undefined);
+  const S = screens[path] ?? (path.startsWith('/accounts/add/') ? AddAccount : path.startsWith('/refuel/') ? Refuel : path.startsWith('/agent/') ? AgentSettings : path.startsWith('/op/') ? Operation : path === '/oauth' || path.startsWith('/oauth/') ? OAuthConsent : undefined);
   const k = path.startsWith('/accounts') || path === '/seeds' ? path : account.id;
   return <div className="app"><Sub path={path} nav={nav}>{S ? <S key={k} {...p} pick={pick} path={path} /> : <div className="screen"><button className="btn" onClick={() => nav('/')}>{t('main.toHome')}</button></div>}</Sub></div>;
 }

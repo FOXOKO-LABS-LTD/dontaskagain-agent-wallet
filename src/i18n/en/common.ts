@@ -27,6 +27,7 @@ export const common: { [K in keyof typeof R]: Entry } = {
   'title.settings': 'Settings',
   'title.book': 'Address book',
   'title.agentNew': 'Connect an agent',
+  'title.oauth': 'Connect a chat app',
   'title.agent': 'Agent settings',
   'title.op': 'Operation',
   'title.sign': 'Agent requests',

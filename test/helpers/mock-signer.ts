@@ -11,6 +11,7 @@ import { docDigest, docSignText } from '../../src/lib/wallet/doc';
 import { tronToHex41 } from '../../src/lib/tron/address';
 import { e2eDocDigest } from '../../src/lib/e2e/protocol';
 import { bundleOf, fingerprint, generateKeys } from '../../src/lib/e2e/crypto';
+import { consentSignText } from '../../src/lib/oauth';
 
 export interface MockState {
   accounts: Record<string, { exists: boolean; balanceSun: number; energy: number; freeNet: number; usdt: bigint }>;
@@ -33,6 +34,8 @@ export interface MockState {
    *  code at the account, base fee / priority (wei); Iris fees relayed by /v1/ext/bridge/fees */
   evm?: { native: Record<number, bigint>; usdc: Record<number, bigint>; usdt?: Record<number, bigint>; allowance?: Record<number, bigint>; nonce?: Record<number, number>; code?: string; baseFee?: bigint; prio?: bigint };
   bridgeFees?: any[];
+  /** 0.3.13: OAuth consents by user code (what oauth.consent.get answers) and the decisions received (signature checked) */
+  oauth?: { consents: Record<string, any>; decided?: { m: any; text: string; sig_ok: boolean }[] };
   /** the Signer's E2E mode in hello (unset = an old Signer without E2E) */
   e2eMode?: 'on' | 'required' | 'off';
   /** direct reads (E2E: /wallet/<method> = the TRON node, /rpc/<chain> = EVM RPC) and the x402 gateway (/gw/…) */
@@ -285,7 +288,7 @@ export async function startMockSigner(st: MockState) {
         if (m.type !== 'auth' || m.session !== 'agws_test') return ws.close(4401);
         authed = true;
         ws.send(JSON.stringify({ type: 'hello', id: 'h1', server_time: new Date().toISOString(), wallet_id: 'wal_test', wallet_doc_version_seen: docs.at(-1)?.doc.version ?? 0, paused: !!st.paused, ...(st.docService !== false ? { doc_service: true } : {}),
-          ...(st.e2eMode ? { e2e: { mode: st.e2eMode, limits: { max_envelope: 65536 } } } : {}),
+          ...(st.e2eMode ? { e2e: { mode: st.e2eMode, limits: { max_envelope: 65536 }, ...(st.oauth ? { oauth: true } : {}) } } : {}),
           networks: [{ network: 'tron' }, { network: 'evm:8453', chain_id: 8453, tokens: [{ symbol: 'USDC', address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', decimals: 6 }] }, { network: 'evm:999', chain_id: 999 }] }));
         ws.send(JSON.stringify({ type: 'request.list', id: 'l1', requests: [] }));
         return;
@@ -315,10 +318,32 @@ export async function startMockSigner(st: MockState) {
           if (m.key_mode === 'server') { const k = generateKeys(); serverAgents[id] = k; return ack({ agent: { id, name: m.name }, token: `aw_${id}_${'A'.repeat(52)}`, agent_keys: { bundle: bundleOf(k), fp: fingerprint(k.sig, k.kex) } }); }
           return ack({ agent: { id, name: m.name }, token: `aw_${id}_${'A'.repeat(52)}` });
         }
+        case 'oauth.consent.get': {
+          const c = st.oauth?.consents[m.user_code];
+          if (!c) return nack('CONSENT_NOT_FOUND', 'no such code');
+          if (c.wallet && c.wallet !== 'wal_test') return nack('CONSENT_TAKEN', 'taken');
+          c.wallet = 'wal_test';
+          return ack({ consent: c.view });
+        }
+        case 'oauth.consent.decide': {
+          const c = Object.values(st.oauth?.consents ?? {}).find((x: any) => x.view.id === m.consent_id) as any;
+          if (!c || c.wallet !== 'wal_test') return nack('CONSENT_NOT_FOUND', 'no such consent');
+          const text = consentSignText({ service: wsHost!, wallet_id: 'wal_test', consent_id: c.view.id, client_id: c.view.client.id, redirect_uri: c.view.redirect_uri,
+            scope: c.view.scope, decision: m.decision, accounts: m.accounts ?? [], types: m.allowed_types ?? [] });
+          const sig_ok = (await recoverEvmMessage(text, m.sig_evm)) === walletRoot!.evm && (await recoverTronMessage(text, m.sig_tron)) === walletRoot!.tron;
+          (st.oauth!.decided ??= []).push({ m, text, sig_ok });
+          if (!sig_ok) return nack('BAD_SIGNATURE', 'sig');
+          if (m.decision === 'deny') return ack({});
+          agentSeq++;
+          const id = `ag_c${agentSeq}`;
+          const k = generateKeys(); serverAgents[id] = k;
+          return ack({ agent: { id, name: `cloud-${agentSeq}` }, agent_keys: { bundle: bundleOf(k), fp: fingerprint(k.sig, k.kex), mode: 'server' },
+            cloud: { client_id: c.view.client.id, client_name: c.view.client.name, redirect_host: c.view.redirect_host } });
+        }
         case 'e2e.send': e2eSent.push(m.envelope); return ack({ seq: e2eSent.length });
         case 'e2e.ack': return ack();
         case 'e2e.job': jobs.push(m.job); return ack({ job_id: m.job.job_id, job: { ...m.job, state: 'running' } });
-        case 'agent.list': return ack({ agents: (st as any).agentList ?? [] });
+        case 'agent.list': return ack({ agents: (st as any).agentList ?? [], ...((st as any).cloudList ? { cloud: (st as any).cloudList } : {}) });
         case 'agent.revoke': return ack();
         case 'agent.rotate': {
           rotSeq++; const pre = `aw_${m.agent_id}_R${rotSeq}`;

@@ -1,4 +1,5 @@
 import { OriginPlate, SignedPlates } from './OriginPlate';
+import { CloudBadge, CloudPlate } from './Cloud';
 // Sign window for EVM: an EVM transfer or a refuel (one transaction), a CCTP bridge (approve? + burn
 // now, mint later in the destination — by the wallet without a second window, or by Circle Forwarding). The agent's
 // words on top, then the decoded built bytes of every transaction, gas in the native coin, blocks with the reason
@@ -69,7 +70,7 @@ export function EvmReview({ v, onSign, onReject, busy }: Props) {
     <div>
       <div className="said">
         <div className="who">
-          {v.kind === 'agent' ? <><span className="eyebrow">{t('review.agentEyebrow')}</span><b>{v.agent?.name}</b>{!v.agent?.known && <span className="badge warn">{t('review.notInDoc')}</span>}</>
+          {v.kind === 'agent' ? <><span className="eyebrow">{t('review.agentEyebrow')}</span><b>{v.agent?.name}</b>{v.agent?.cloud && <CloudBadge />}{!v.agent?.known && <span className="badge warn">{t('review.notInDoc')}</span>}</>
             : <><span className="eyebrow blue">{t('review.youEyebrow')}</span><b>{t('review.noAgent')}</b></>}
           <span className="grow" />
           {v.expires_at && <Countdown until={v.expires_at} />}
@@ -150,7 +151,7 @@ export function EvmReview({ v, onSign, onReject, busy }: Props) {
         </div>
       )}
 
-      {v.e2e && <OriginPlate e={v.e2e} />}
+      {v.agent?.cloud ? <CloudPlate /> : v.e2e && <OriginPlate e={v.e2e} />}
       {v.warnings.map((w, i) => <div key={i} className="plate warn">{w}</div>)}
       {v.blocked && <div className="plate bad">{t('review.blocked')} {v.blocked.text ?? v.blocked.message} <span className="small">({v.blocked.code})</span>
         {v.refuel_hint && <div style={{ marginTop: 8 }}><button className="btn sm primary" onClick={() => openRefuel(v.refuel_hint!.to_network)}>{t('evmr.refuelOn', { net: netName(v.refuel_hint.to_network) })}</button></div>}

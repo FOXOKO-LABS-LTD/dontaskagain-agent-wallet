@@ -38,6 +38,8 @@ import { isUnlocked, onRekey, requireUnlocked, rootKeys, updateVault } from './w
 // ---------------- state ----------------
 export type ServerMode = 'off' | 'on' | 'required' | 'unknown';
 let serverMode: ServerMode = 'unknown';
+/** 0.3.13: the Signer offers OAuth for chat apps (hello.e2e.oauth) — «Connect a chat app» is shown only then */
+let oauthOn = false;
 /** Sync flag for readers (requests.ts readers(), swap reader): E2E is in use now. */
 export let E2E_ON = false;
 
@@ -224,7 +226,7 @@ export async function unpinE2E(): Promise<void> {
 export async function e2eView(): Promise<E2EView> {
   const p = await getPublic();
   return { server_mode: serverMode, active: await e2eActive(), wanted: await e2eWanted(), downgraded: await e2eDowngraded(), wallet_fp: p?.e2e_key?.fp, wallet_key: p?.e2e_key?.bundle,
-    public_signer_url: e2eCfg.public_signer_url, public_placeholder: !!e2eCfg.public_signer_placeholder };
+    public_signer_url: e2eCfg.public_signer_url, public_placeholder: !!e2eCfg.public_signer_placeholder, oauth: oauthOn && serverMode !== 'off' };
 }
 
 // ---------------- wallet keys ----------------
@@ -294,6 +296,7 @@ export async function syncE2EDoc(): Promise<void> {
 export async function onHelloE2E(m: any): Promise<void> {
   const mode = m?.e2e?.mode;
   serverMode = mode === 'on' || mode === 'required' || mode === 'off' ? mode : 'off';
+  oauthOn = serverMode !== 'off' && m?.e2e?.oauth === true;
   modeRestored = true;
   const p0 = await getPublic();
   await patchSession({ e2eServerMode: { mode: serverMode, origin: originOf(p0?.settings.signer_url) } } as any);

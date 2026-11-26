@@ -30,6 +30,8 @@ export interface OpView {
   request_id: string; type: string; title: string; subtitle?: string; initiator: string; reason?: string;
   /** started by the human (no agent): the page says «your operation» without comparing words */
   own: boolean;
+  /** 0.3.13: started by a cloud agent of a chat app (the Signer sees its requests) */
+  cloud?: boolean;
   status: string; status_label: string; tone: 'ok' | 'bad' | 'warn' | 'info'; final: boolean;
   created_at?: string; finished_at?: string;
   steps: OpStep[]; facts: { k: string; v: string }[];

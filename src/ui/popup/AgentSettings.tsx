@@ -9,6 +9,7 @@ import { AgentConnect, PairState } from './AgentConnect';
 import { t } from '../../i18n';
 import { npxDefaultCommand } from '../../lib/agentConnect';
 import type { ScreenProps } from './screen';
+import { CloudBadge, CloudPlate } from '../common/Cloud';
 
 type Extra = { path: string };
 
@@ -20,24 +21,41 @@ export function AgentSettings({ st, nav, path }: ScreenProps & Extra) {
   if (a.revoked_at || revoked) return (
     <div className="screen">
       <div className="card"><h2 style={{ margin: 0 }}>{a.name}</h2><div className="small muted">{t('agset.revokedAt', { at: fmtTime(a.revoked_at) })}</div></div>
-      <AgentConnect st={st} mode="revoked" mcpName={revoked ?? a.mcp_name} />
+      {!a.cloud && <AgentConnect st={st} mode="revoked" mcpName={revoked ?? a.mcp_name} />}
       <button className="btn block" onClick={() => nav('/agents')}>{t('agset.toAgents')}</button>
     </div>
   );
   return (
     <div className="screen">
       {!st.signer.connected && <div className="plate warn small">{t('agset.noSigner')}</div>}
+      {a.cloud && <CloudSection a={a} />}
       <NameSection a={a} st={st} />
       <AccountsSection a={a} st={st} />
       <TypesSection a={a} st={st} />
-      <TokenSection a={a} st={st} />
-      <AgentConnect st={st} mode="current" mcpName={a.mcp_name} />
+      {/* a cloud agent has no token and nothing to run: it reconnects from the chat app */}
+      {!a.cloud && <TokenSection a={a} st={st} />}
+      {!a.cloud && <AgentConnect st={st} mode="current" mcpName={a.mcp_name} />}
       <RevokeSection a={a} st={st} onDone={setRevoked} />
     </div>
   );
 }
 
 type P = { a: AgentView; st: ScreenProps['st'] };
+
+/** 0.3.13: a cloud agent — which chat app, where its sign-in returned, the plate. */
+function CloudSection({ a }: { a: AgentView }) {
+  if (!a.cloud) return null;
+  return (
+    <div className="card">
+      <h2>{t('oauth.cloudInfo')} <CloudBadge /></h2>
+      <CloudPlate />
+      <div className="small" style={{ marginTop: 6 }}><b>{a.cloud.client_name}</b> <span className="badge">{t('oauth.unverified')}</span></div>
+      <div className="small">{t('oauth.redirect')}: <b className="mono">{a.cloud.redirect_host}</b></div>
+      <div className="small muted">{t('oauth.connectedAt', { at: fmtTime(a.cloud.connected_at) })}</div>
+      <p className="small muted" style={{ marginTop: 6 }}>{t('oauth.cloudInfoHint')}</p>
+    </div>
+  );
+}
 
 function NameSection({ a, st }: P) {
   const [name, setName] = useState(a.name);
@@ -47,7 +65,7 @@ function NameSection({ a, st }: P) {
     <div className="card">
       <h2>{t('agset.name')}</h2>
       <label className="field"><span>{t('agset.nameHint')}</span><input value={name} maxLength={48} onChange={(e) => setName(e.target.value)} /></label>
-      <div className="row"><span className="small muted grow">{t('agset.sinceToken', { at: fmtTime(a.created_at), prefix: a.token_prefix ?? '' })}</span>
+      <div className="row"><span className="small muted grow">{a.cloud ? t('oauth.connectedAt', { at: fmtTime(a.cloud.connected_at) }) : t('agset.sinceToken', { at: fmtTime(a.created_at), prefix: a.token_prefix ?? '' })}</span>
         <button className="btn sm primary" disabled={busy || !dirty || !name.trim() || !st.signer.connected} onClick={() => void run(() => api({ cmd: 'agentUpdate', id: a.id, patch: { name: name.trim() } }))}>{t('common.save')}</button></div>
       <Err msg={err} />
     </div>

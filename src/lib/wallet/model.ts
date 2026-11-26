@@ -5,6 +5,7 @@ import type { BookEntry, SimilarCfg } from '../similar';
 import e2eCfg from '../../config/e2e.json';
 import { insecureUrl } from '../urlPolicy';
 import { t, type Key } from '../../i18n';
+import type { CloudInfo } from '../oauth';
 
 export type Origin = 'hd' | 'imported';
 
@@ -86,6 +87,9 @@ export interface AgentEntry {
   pairing?: { code?: string; manual_fp?: string; expires_at: string };
   /** 0.3.0: the neutral name the server knows (E2E: the real name is only inside the encrypted view) */
   server_name?: string;
+  /** 0.3.13: a cloud agent of a chat app connected through OAuth — its E2E key is held by the Signer (mode server),
+   * the Signer sees its requests; no `aw_` token exists for it. */
+  cloud?: CloudInfo;
 }
 
 export interface AgentE2EKey { bundle: string; fp: string; mode: 'agent' | 'server'; via: 'code' | 'manual' | 'server'; paired_at: string; confirmed?: boolean }

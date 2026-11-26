@@ -25,6 +25,7 @@ export const common = {
   'title.settings': 'Настройки',
   'title.book': 'Адресная книга',
   'title.agentNew': 'Подключить агента',
+  'title.oauth': 'Подключить чат-приложение',
   'title.agent': 'Настройки агента',
   'title.op': 'Операция',
   'title.sign': 'Запросы агентов',

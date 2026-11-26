@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 0.3.6 UI kit 1.1.1: the key screens in both themes and both languages (mock data, same harness as shots.sh).
 # Usage: scripts/preview/shots-ui-kit.sh <chrome-binary> [out-dir]   (ONLY=<regex> limits the set,
-# DPR=2 for a zoomed check, PORT=<n> if 9951 is taken; 0.3.7: + side panel 300 px; 0.3.8: + connect step per MCP client)
+# DPR=2 for a zoomed check, PORT=<n> if 9951 is taken; 0.3.7: + side panel 300 px; 0.3.8: + connect step per MCP client; 0.3.13: + OAuth consent, cloud agent)
 set -euo pipefail
 CH=${1:?chrome binary}; OUT=${2:-docs/screens-ui-kit}
 cd "$(dirname "$0")/../.."
@@ -51,6 +51,15 @@ for TH in light dark; do for L in ru en; do
   shot panel-$N-17-e2e-op-progress 420,1000 "$B/panel.html?$P&e2e=public#/op/op_e2e_run"
   shot panel-$N-18-e2e-op-done    420,1000 "$B/panel.html?$P&e2e=public#/op/op_e2e_done"
   shot panel-$N-19-e2e-op-chain   420,900  "$B/panel.html?$P&e2e=public#/op/chain%3Aevm%3A8453%3A0x9a9a%3A3"
+  # 0.3.13: a chat app through OAuth — the consent screen (and a loopback redirect), the cloud agent's mark
+  shot panel-$N-20-oauth-code      420,700  "$B/panel.html?$P&cloud=1#/oauth"
+  shot panel-$N-21-oauth-consent   420,1500 "$B/panel.html?$P&cloud=1#/oauth/ABCD-EFGH"
+  shot panel-$N-22-oauth-loopback  420,1500 "$B/panel.html?$P&cloud=1&loop=1#/oauth/ABCD-EFGH"
+  shot panel-$N-23-cloud-agents    420,1400 "$B/panel.html?$P&cloud=1&migrated=1&act=scroll:.card#/agents"
+  shot panel-$N-24-cloud-settings  420,1700 "$B/panel.html?$P&cloud=1#/agent/ag_cloud"
+  shot panel-$N-25-cloud-sign      420,1500 "$B/panel.html?$P&cloud=1#/sign/awr_c1"
+  shot panel-$N-26-cloud-op        420,1000 "$B/panel.html?$P&cloud=1#/op/op_cloud"
+  shot panel-$N-27-cloud-history   420,1000 "$B/panel.html?$P&cloud=1#/history"
   # sign window
   shot sign-$N-01-top          460,760  "$B/sign.html?$P"
   shot sign-$N-02-full         460,1500 "$B/sign.html?$P"

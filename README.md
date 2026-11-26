@@ -42,7 +42,8 @@ planned.
    https://dontaskagain.xyz/dl/latest.json) and check the sha256.
 2. Unzip it into a folder you keep.
 3. Open `chrome://extensions`, switch on **Developer mode**, click **Load unpacked** and pick that folder
-   (Chrome 116 or newer).
+   (Chrome 116 or newer). The extension id is always `lfjhjcdnafhiageojbcodejdhlohelea` (fixed by the `key` in the
+   manifest since 0.3.14); a different id means a different build.
 4. Create or import a recovery phrase and set a password.
 5. To use the public Signer, request an invitation at https://dontaskagain.xyz/#access and paste the invitation link
    in **Settings → Signer**. A Signer at another address can be set there too (**Own Signer**).

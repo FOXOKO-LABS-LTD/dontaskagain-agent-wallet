@@ -439,6 +439,8 @@ export async function answerNewTypes(id: string, allow: string[]): Promise<void>
 export async function refreshAgents(): Promise<any[]> {
   const ack = await socket.request('agent.list', {});
   const list: any[] = Array.isArray(ack?.agents) ? ack.agents : [];
+  // 0.3.13: which agents are cloud ones (the Signer's own record): only ever ADDS the mark (a warning), never removes it
+  const cloud: Record<string, any> = ack?.cloud && typeof ack.cloud === 'object' ? ack.cloud : {};
   if (await isUnlocked()) await updateVault((vault) => { // merged into the vault as it is now
     let changed = false;
     for (const a of list) {
@@ -448,6 +450,12 @@ export async function refreshAgents(): Promise<any[]> {
       } else {
         if (a.revoked_at && !mine.revoked_at) { mine.revoked_at = a.revoked_at; changed = true; }
         if (typeof a.token_prefix === 'string' && a.token_prefix && a.token_prefix !== mine.token_prefix) { mine.token_prefix = a.token_prefix; changed = true; }
+        const c = Object.prototype.hasOwnProperty.call(cloud, a.id) ? cloud[a.id] : undefined;
+        if (c && !mine.cloud && typeof c.client_id === 'string') {
+          const str = (v: unknown, n: number) => stripBidi(String(v ?? '')).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, n);
+          mine.cloud = { client_id: str(c.client_id, 512), client_name: str(c.client_name, 64) || str(c.client_id, 64), redirect_host: str(c.redirect_host, 255), consent_id: str(c.consent_id, 80), connected_at: mine.created_at ?? new Date().toISOString() };
+          changed = true;
+        }
       }
     }
     return changed;
